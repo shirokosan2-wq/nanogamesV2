@@ -1,0 +1,3307 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0a0e1a">
+<title>Nano Games</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-base:#0a0e1a;--bg-surface:#121829;--bg-elevated:#1a2238;--bg-hover:#1f2944;
+  --accent:#22d3ee;--accent-2:#06b6d4;--text-primary:#e8eefc;--text-muted:#7a87a8;
+  --success:#34d399;--danger:#f87171;--gold:#fbbf24;
+  --radius:16px;--radius-lg:24px;
+}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg-base);color:var(--text-primary);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;user-select:none}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;touch-action:manipulation}
+#app{height:100vh;height:100dvh;position:relative;overflow:hidden}
+.screen{position:absolute;top:0;left:0;right:0;bottom:0;display:none;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.screen.active{display:flex}
+
+/* Splash */
+.splash{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg-base);z-index:9999;display:flex;align-items:center;justify-content:center;transition:opacity .4s}
+.splash.hide{opacity:0;pointer-events:none}
+.splash-logo{text-align:center}
+.splash-logo h1{font-size:2rem;font-weight:800;margin-top:16px;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.splash-logo p{color:var(--text-muted);font-size:.85rem;margin-top:4px}
+
+/* Header */
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px;gap:8px}
+.app-header.compact{padding:8px 12px;gap:8px}
+.logo{display:flex;align-items:center;gap:10px;min-width:0;flex-shrink:1}
+.logo-icon{width:40px;height:40px;flex-shrink:0}
+.logo-title{font-size:1rem;font-weight:800;line-height:1}
+.logo-subtitle{font-size:.65rem;color:var(--text-muted);margin-top:2px}
+.header-actions{display:flex;gap:4px;flex-shrink:0}
+.icon-btn{width:36px;height:36px;border-radius:10px;background:var(--bg-surface);font-size:16px;transition:background .15s,transform .1s;display:flex;align-items:center;justify-content:center}
+.icon-btn:active{background:var(--bg-hover);transform:scale(.95)}
+.screen-title{font-size:1rem;font-weight:700;flex:1;text-align:center}
+
+/* Menu */
+.game-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:8px 14px 16px;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+.game-card{background:var(--bg-surface);border-radius:var(--radius);padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;transition:transform .15s;min-height:120px;border:1px solid rgba(255,255,255,.03)}
+.game-card:active{transform:scale(.96)}
+.game-icon{font-size:36px;line-height:1}
+.game-name{font-size:.8rem;font-weight:700;line-height:1.15}
+.game-desc{font-size:.62rem;color:var(--text-muted);line-height:1.2}
+.app-footer{padding:6px 14px 12px;text-align:center}
+.app-footer p{font-size:.68rem;color:var(--text-muted)}
+.app-footer a{color:var(--accent);text-decoration:none}
+.footer-credit{display:inline-flex;align-items:center;gap:6px;margin-top:4px;text-decoration:none;color:var(--text-muted);font-size:.68rem}
+.footer-credit img{width:18px;height:18px;border-radius:50%;object-fit:cover;border:1px solid var(--accent)}
+.footer-credit span{color:var(--accent)}
+
+/* Game screen */
+.game-hud{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;gap:8px}
+.hud-btn{width:38px;height:38px;border-radius:10px;background:var(--bg-surface);font-size:15px;display:flex;align-items:center;justify-content:center;transition:background .15s,transform .1s;color:var(--text-primary);flex-shrink:0}
+.hud-btn:active{background:var(--bg-hover);transform:scale(.95)}
+.hud-stats{display:flex;gap:18px;flex:1;justify-content:center}
+.hud-stat{display:flex;flex-direction:column;align-items:center;gap:1px}
+.hud-label{font-size:.58rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.hud-value{font-size:1.1rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1}
+.game-area{flex:1;display:flex;align-items:center;justify-content:center;padding:8px;overflow:hidden;min-height:0;position:relative}
+.game-area canvas{display:block;border-radius:var(--radius);background:#060810;touch-action:none}
+.game-controls{padding:8px 10px 14px;display:flex;align-items:center;justify-content:center;min-height:76px;gap:14px;flex-shrink:0}
+
+/* D-pad + action buttons */
+.dpad{display:grid;grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,54px);gap:4px}
+.dpad-btn{background:var(--bg-surface);border-radius:12px;font-size:17px;color:var(--text-primary);display:flex;align-items:center;justify-content:center;transition:background .1s,transform .1s}
+.dpad-btn:active{background:var(--accent);color:var(--bg-base);transform:scale(.93)}
+.dpad-up{grid-column:2;grid-row:1}
+.dpad-left{grid-column:1;grid-row:2}
+.dpad-right{grid-column:3;grid-row:2}
+.dpad-down{grid-column:2;grid-row:3}
+.action-btn{width:58px;height:58px;border-radius:50%;background:var(--bg-surface);font-size:12px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;justify-content:center;transition:background .1s,transform .1s;flex-shrink:0}
+.action-btn:active{background:var(--accent);color:var(--bg-base);transform:scale(.93)}
+.control-hint{color:var(--text-muted);font-size:.78rem;text-align:center;padding:16px}
+
+/* Achievements */
+.achievements-list{padding:8px 14px 24px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px}
+.ach-card{background:var(--bg-surface);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:8px}
+.ach-header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ach-name{font-weight:700;font-size:.88rem;display:flex;align-items:center;gap:8px}
+.ach-level{font-size:.7rem;color:var(--text-muted);font-weight:600}
+.ach-level.gold{color:var(--gold)}
+.ach-pips{display:flex;gap:4px}
+.pip{width:16px;height:6px;border-radius:2px;background:var(--bg-elevated)}
+.pip.on{background:var(--accent)}
+.pip.gold{background:var(--gold)}
+.ach-progress{height:4px;background:var(--bg-elevated);border-radius:2px;overflow:hidden}
+.ach-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.ach-progress-label{font-size:.65rem;color:var(--text-muted);display:flex;justify-content:space-between}
+
+/* Settings */
+.settings-list{padding:8px 14px 24px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px}
+.setting-row{background:var(--bg-surface);border-radius:var(--radius);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
+.setting-name{font-weight:600;font-size:.88rem}
+.setting-desc{font-size:.7rem;color:var(--text-muted);margin-top:2px}
+.switch{appearance:none;width:44px;height:26px;background:var(--bg-elevated);border-radius:13px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;background:var(--text-muted);border-radius:50%;transition:left .2s,background .2s}
+.switch:checked{background:var(--accent)}
+.switch:checked::after{left:21px;background:var(--bg-base)}
+.danger-btn{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--danger);padding:14px;border-radius:var(--radius);font-weight:600;font-size:.85rem;margin-top:8px}
+.settings-footer{text-align:center;margin-top:20px;font-size:.7rem;color:var(--text-muted);line-height:1.6}
+.muted{opacity:.5}
+
+/* Modal */
+.modal-backdrop{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,14,26,.88);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100;animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--bg-elevated);border-radius:var(--radius-lg);padding:22px;max-width:380px;width:100%;display:flex;flex-direction:column;gap:14px;animation:scaleIn .2s;max-height:85vh;overflow-y:auto}
+@keyframes scaleIn{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-title{font-size:1.3rem;font-weight:800;text-align:center}
+.modal-body{text-align:center;color:var(--text-muted);font-size:.88rem;line-height:1.5}
+.modal-body .big{font-size:2rem;color:var(--accent);font-weight:800;display:block;margin:6px 0;font-variant-numeric:tabular-nums}
+.modal-body .new-best{color:var(--gold);font-weight:700;font-size:.85rem;margin-top:4px}
+.modal-actions{display:flex;flex-direction:column;gap:8px}
+.modal-btn{padding:12px 18px;border-radius:11px;font-weight:700;font-size:.88rem;background:var(--bg-surface);color:var(--text-primary);text-align:center;text-decoration:none}
+.modal-btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--bg-base)}
+.modal-btn:active{transform:scale(.97)}
+
+/* Credits */
+.credits-content{display:flex;flex-direction:column;align-items:center;gap:10px;padding:4px 0}
+.credits-avatar{width:110px;height:110px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));overflow:hidden;position:relative;border:3px solid var(--accent);box-shadow:0 0 24px rgba(34,211,238,.5),0 0 60px rgba(34,211,238,.2);animation:creditsGlow 3s ease-in-out infinite}
+@keyframes creditsGlow{0%,100%{box-shadow:0 0 24px rgba(34,211,238,.5),0 0 60px rgba(34,211,238,.2)}50%{box-shadow:0 0 32px rgba(34,211,238,.85),0 0 80px rgba(34,211,238,.35)}}
+.credits-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.credits-avatar .fallback{display:none;align-items:center;justify-content:center;width:100%;height:100%;font-size:2.8rem;font-weight:800;color:var(--bg-base)}
+.credits-avatar.failed img{display:none}
+.credits-avatar.failed .fallback{display:flex}
+.credits-name{font-size:1.3rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-.02em}
+.credits-tag{font-size:.72rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-top:-4px;padding:2px 10px;border:1px solid rgba(34,211,238,.4);border-radius:999px}
+.credits-desc{font-size:.8rem;color:var(--text-muted);text-align:center;line-height:1.6;margin-top:6px}
+.credits-stats{display:flex;gap:16px;justify-content:center;margin-top:4px;padding:8px 0;width:100%;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)}
+.credits-stat{display:flex;flex-direction:column;align-items:center;gap:1px}
+.credits-stat-num{font-size:1rem;font-weight:800;color:var(--accent)}
+.credits-stat-lbl{font-size:.6rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.credits-link{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;background:#000;color:#fff;border-radius:11px;font-weight:700;text-decoration:none;font-size:.88rem;margin-top:8px;width:100%}
+.credits-link:active{opacity:.8}
+.credits-link svg{width:20px;height:20px;fill:#fff}
+
+/* Toasts */
+.achievement-toast{position:fixed;top:calc(env(safe-area-inset-top) + 12px);left:14px;right:14px;background:linear-gradient(135deg,var(--bg-elevated),var(--bg-surface));border:1px solid rgba(251,191,36,.4);border-radius:var(--radius);padding:12px 14px;z-index:200;transform:translateY(-150%);transition:transform .4s cubic-bezier(.34,1.56,.64,1);max-width:400px;margin:0 auto}
+.achievement-toast.show{transform:translateY(0)}
+.ach-tier{color:var(--gold);font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:1px}
+.ach-toast-name{font-weight:800;font-size:.92rem;margin-top:2px}
+.ach-req{font-size:.72rem;color:var(--text-muted);margin-top:2px}
+.simple-toast{position:fixed;bottom:calc(env(safe-area-inset-bottom) + 20px);left:50%;transform:translateX(-50%) translateY(80px);opacity:0;background:var(--bg-elevated);padding:10px 18px;border-radius:999px;font-size:.8rem;z-index:300;transition:transform .25s,opacity .25s;pointer-events:none;white-space:nowrap}
+.simple-toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+@media (min-width:600px){
+  .game-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- MENU -->
+  <section id="screen-menu" class="screen active">
+    <header class="app-header">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 48 48">
+          <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
+          <rect x="4" y="10" width="40" height="30" rx="8" fill="url(#lg)"/>
+          <circle cx="16" cy="22" r="3.5" fill="#0a0e1a"/><circle cx="32" cy="22" r="3.5" fill="#0a0e1a"/>
+          <path d="M15 30 Q24 36 33 30" stroke="#0a0e1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        </svg>
+        <div>
+          <h1 class="logo-title">Nano Games</h1>
+          <p class="logo-subtitle">Mini Arcade Collection</p>
+        </div>
+      </div>
+      <nav class="header-actions">
+        <button class="icon-btn" id="nav-achievements" aria-label="Achievements">🏆</button>
+        <button class="icon-btn" id="nav-settings" aria-label="Settings">⚙️</button>
+        <button class="icon-btn" id="nav-about" aria-label="About">ℹ️</button>
+      </nav>
+    </header>
+    <main class="game-grid" id="game-grid"></main>
+    <footer class="app-footer">
+      <p id="menu-stats">0 games</p>
+      <a class="footer-credit" href="https://www.tiktok.com/@eiai_nano7" target="_blank" rel="noopener">
+        <img src="avatar.png" alt="" onerror="this.style.display='none'">
+        Made by <span>@eiai_nano7</span>
+      </a>
+    </footer>
+  </section>
+
+  <!-- GAME -->
+  <section id="screen-game" class="screen">
+    <header class="game-hud">
+      <button class="hud-btn" id="game-back">←</button>
+      <div class="hud-stats">
+        <div class="hud-stat"><span class="hud-label">Score</span><span class="hud-value" id="hud-score">0</span></div>
+        <div class="hud-stat"><span class="hud-label">Best</span><span class="hud-value" id="hud-best">0</span></div>
+      </div>
+      <button class="hud-btn" id="game-pause">⏸</button>
+    </header>
+    <div class="game-area" id="game-area"><canvas id="game-canvas"></canvas></div>
+    <div class="game-controls" id="game-controls"></div>
+  </section>
+
+  <!-- ACHIEVEMENTS -->
+  <section id="screen-achievements" class="screen">
+    <header class="app-header compact">
+      <button class="hud-btn" data-back>←</button>
+      <h2 class="screen-title">Achievements</h2>
+      <div style="width:38px"></div>
+    </header>
+    <main class="achievements-list" id="achievements-list"></main>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="screen-settings" class="screen">
+    <header class="app-header compact">
+      <button class="hud-btn" data-back>←</button>
+      <h2 class="screen-title">Settings</h2>
+      <div style="width:38px"></div>
+    </header>
+    <main class="settings-list">
+      <label class="setting-row">
+        <div><div class="setting-name">Sound Effects</div><div class="setting-desc">Beep & feedback audio</div></div>
+        <input type="checkbox" id="set-sound" class="switch">
+      </label>
+      <label class="setting-row">
+        <div><div class="setting-name">Vibration</div><div class="setting-desc">Haptic feedback (mobile)</div></div>
+        <input type="checkbox" id="set-vibration" class="switch">
+      </label>
+      <button class="danger-btn" id="btn-reset">Reset All Data</button>
+      <div class="settings-footer">
+        <p>Nano Games · v3.1.0</p>
+        <p class="muted">20 games · 60 achievements</p>
+        <p class="muted">Made by @eiai_nano7</p>
+      </div>
+    </main>
+  </section>
+</div>
+
+<div id="modal-root"></div>
+
+<div class="splash" id="splash">
+  <div class="splash-logo">
+    <svg viewBox="0 0 48 48" style="width:80px;height:80px">
+      <defs><linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
+      <rect x="4" y="10" width="40" height="30" rx="8" fill="url(#lg2)"/>
+      <circle cx="16" cy="22" r="3.5" fill="#0a0e1a"/><circle cx="32" cy="22" r="3.5" fill="#0a0e1a"/>
+      <path d="M15 30 Q24 36 33 30" stroke="#0a0e1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </svg>
+    <h1>Nano Games</h1>
+    <p>Mini Arcade Collection</p>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CORE
+   ============================================================ */
+window.NanoGames = { games: [] };
+NanoGames.registerGame = function(d) { NanoGames.games.push(d); };
+NanoGames.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+NanoGames.rand = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+
+/* ============================================================
+   STORAGE
+   ============================================================ */
+const Storage = (() => {
+  const KEY = 'nanogames:v3';
+  let data = { highscores: {}, achievements: {}, settings: { sound: true, vibration: true } };
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        data.highscores = p.highscores || {};
+        data.achievements = p.achievements || {};
+        data.settings = Object.assign(data.settings, p.settings || {});
+      }
+    } catch(e) { console.warn('Storage load failed', e); }
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch(e) {} }
+  return {
+    init: load,
+    getHighscore(id) { return data.highscores[id] || 0; },
+    setHighscore(id, score) {
+      const cur = data.highscores[id] || 0;
+      if (score > cur) { data.highscores[id] = score; save(); return true; }
+      return false;
+    },
+    getAchievementLevel(id) { return data.achievements[id] || 0; },
+    setAchievementLevel(id, lvl) {
+      if (lvl > (data.achievements[id] || 0)) { data.achievements[id] = lvl; save(); }
+    },
+    getSetting(k) { return data.settings[k]; },
+    setSetting(k, v) { data.settings[k] = v; save(); },
+    reset() { data = { highscores: {}, achievements: {}, settings: { sound: true, vibration: true } }; save(); }
+  };
+})();
+
+/* ============================================================
+   AUDIO
+   ============================================================ */
+const Audio = (() => {
+  let ctx = null, enabled = true;
+  function ensure() {
+    if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} }
+    if (ctx && ctx.state === 'suspended') ctx.resume();
+  }
+  function tone(freq, ms, type = 'square', vol = 0.06) {
+    if (!enabled) return; ensure(); if (!ctx) return;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = freq;
+    const now = ctx.currentTime, dur = ms / 1000;
+    g.gain.setValueAtTime(vol, now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(now); o.stop(now + dur);
+  }
+  return {
+    setEnabled(v) { enabled = v; },
+    unlock() { ensure(); },
+    click() { tone(1000, 30); },
+    tap() { tone(700, 25, 'sine'); },
+    eat() { tone(880, 70, 'sine', 0.09); },
+    hit() { tone(200, 150, 'sawtooth', 0.09); },
+    jump() { tone(600, 80, 'square', 0.07); },
+    score() { tone(1047, 60, 'sine', 0.08); },
+    success() {
+      tone(523, 90, 'sine');
+      setTimeout(() => tone(659, 90, 'sine'), 90);
+      setTimeout(() => tone(784, 140, 'sine'), 180);
+    },
+    gameOver() {
+      tone(494, 200);
+      setTimeout(() => tone(440, 120), 220);
+      setTimeout(() => tone(466, 120), 350);
+      setTimeout(() => tone(392, 400), 490);
+    }
+  };
+})();
+
+/* ============================================================
+   INPUT — semua fungsi return cleanup function
+   ============================================================ */
+const Input = (() => {
+  function pt(el, e) {
+    const r = el.getBoundingClientRect();
+    const t = e.changedTouches ? e.changedTouches[0] : e;
+    return { x: t.clientX - r.left, y: t.clientY - r.top, w: r.width, h: r.height };
+  }
+  function tap(el, cb) {
+    let lastTouch = 0;
+    const touchHandler = e => {
+      if (e.changedTouches.length > 1) return;
+      e.preventDefault();
+      lastTouch = Date.now();
+      const p = pt(el, e);
+      cb(p.x / p.w, p.y / p.h);
+    };
+    const clickHandler = e => {
+      if (Date.now() - lastTouch < 500) return;
+      const p = pt(el, e);
+      cb(p.x / p.w, p.y / p.h);
+    };
+    el.addEventListener('touchend', touchHandler, { passive: false });
+    el.addEventListener('click', clickHandler);
+    return () => {
+      el.removeEventListener('touchend', touchHandler);
+      el.removeEventListener('click', clickHandler);
+    };
+  }
+  function drag(el, cb) {
+    let dragging = false;
+    const start = e => { const p = pt(el, e); dragging = true; cb(p.x / p.w, p.y / p.h, 'start'); };
+    const move = e => { if (!dragging) return; e.preventDefault(); const p = pt(el, e); cb(p.x / p.w, p.y / p.h, 'move'); };
+    const end = () => { if (!dragging) return; dragging = false; cb(0, 0, 'end'); };
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchmove', move, { passive: false });
+    el.addEventListener('touchend', end);
+    el.addEventListener('touchcancel', end);
+    el.addEventListener('mousedown', start);
+    el.addEventListener('mousemove', move);
+    el.addEventListener('mouseup', end);
+    el.addEventListener('mouseleave', end);
+    return () => {
+      el.removeEventListener('touchstart', start);
+      el.removeEventListener('touchmove', move);
+      el.removeEventListener('touchend', end);
+      el.removeEventListener('touchcancel', end);
+      el.removeEventListener('mousedown', start);
+      el.removeEventListener('mousemove', move);
+      el.removeEventListener('mouseup', end);
+      el.removeEventListener('mouseleave', end);
+    };
+  }
+  function keyboard(cb) {
+    const map = {
+      ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+      w:'up', s:'down', a:'left', d:'right', W:'up', S:'down', A:'left', D:'right',
+      ' ':'a', z:'a', Z:'a', x:'b', X:'b',
+      Escape:'pause', p:'pause', P:'pause'
+    };
+    const handler = e => {
+      if (e.repeat) return;
+      const a = map[e.key];
+      if (a) { e.preventDefault(); cb(a); }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }
+  return { tap, drag, keyboard };
+})();
+
+/* ============================================================
+   GAME BASE
+   ============================================================ */
+class GameBase {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d', { alpha: false });
+    this.W = 0; this.H = 0;
+    this.paused = false; this.over = false; this.destroyed = false;
+    this.rafId = null; this.lastTime = 0;
+    this._started = false;
+    this._timeouts = new Set();
+    this.onScoreChange = null; this.onGameOver = null;
+    this._onResize = this._onResize.bind(this);
+    this._loop = this._loop.bind(this);
+  }
+  getAspectRatio() { return 1; }
+  getControls() { return 'tap'; }
+
+  start() {
+    window.addEventListener('resize', this._onResize);
+    let attempts = 0;
+    const attempt = () => {
+      if (this.destroyed) return;
+      this.resize();
+      attempts++;
+      if ((this.W < 20 || this.H < 20) && attempts < 30) {
+        requestAnimationFrame(attempt);
+        return;
+      }
+      if (!this._started) {
+        this.reset();
+        this._started = true;
+      }
+      this.lastTime = performance.now();
+      this.rafId = requestAnimationFrame(this._loop);
+    };
+    requestAnimationFrame(attempt);
+  }
+
+  stop() {
+    this.destroyed = true;
+    for (const id of this._timeouts) clearTimeout(id);
+    this._timeouts.clear();
+    window.removeEventListener('resize', this._onResize);
+    if (this.rafId) cancelAnimationFrame(this.rafId);
+  }
+
+  setTimeout(fn, ms) {
+    const id = setTimeout(() => {
+      this._timeouts.delete(id);
+      if (this.destroyed) return;
+      try { fn(); } catch(e) { console.error('Timeout error:', e); }
+    }, ms);
+    this._timeouts.add(id);
+    return id;
+  }
+
+  pause() { this.paused = true; }
+  resume() { this.paused = false; this.lastTime = performance.now(); }
+
+  resize() {
+    const parent = this.canvas.parentElement;
+    const pr = parent.getBoundingClientRect();
+    let pw = pr.width;
+    let ph = pr.height;
+    if (pw < 20) pw = Math.min(window.innerWidth, 400) - 24;
+    if (ph < 20) ph = Math.max(200, (window.innerHeight || 600) * 0.55);
+    const aspect = this.getAspectRatio();
+    let w = Math.max(40, pw - 16);
+    let h = Math.max(40, ph - 16);
+    if (w / h > aspect) w = h * aspect; else h = w / aspect;
+    const dpr = window.devicePixelRatio || 1;
+    this.canvas.width = Math.max(1, Math.round(w * dpr));
+    this.canvas.height = Math.max(1, Math.round(h * dpr));
+    this.canvas.style.width = w + 'px';
+    this.canvas.style.height = h + 'px';
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.W = w; this.H = h;
+    if (this.onResize) this.onResize();
+  }
+
+  _onResize() { if (!this.destroyed && this._started) this.resize(); }
+
+  _loop(t) {
+    if (this.destroyed) return;
+    const dt = Math.min(0.1, (t - this.lastTime) / 1000);
+    this.lastTime = t;
+    try {
+      if (!this.paused && !this.over) this.update(dt);
+      this.render();
+    } catch(e) { console.error('Game loop error:', e); }
+    this.rafId = requestAnimationFrame(this._loop);
+  }
+
+  reset() {}
+  update(dt) {}
+  render() {}
+  onInput(action, state) {}
+  onTap(nx, ny) {}
+  onDrag(nx, ny, phase) {}
+
+  setScore(s) { if (this.onScoreChange) this.onScoreChange(s); }
+  gameOver(score) {
+    if (this.over || this.destroyed) return;
+    this.over = true;
+    if (this.onGameOver) this.onGameOver(score);
+  }
+
+  bg() { this.ctx.fillStyle = '#060810'; this.ctx.fillRect(0, 0, this.W, this.H); }
+  rect(x, y, w, h, c) { this.ctx.fillStyle = c; this.ctx.fillRect(x, y, w, h); }
+  circle(x, y, r, c) { this.ctx.fillStyle = c; this.ctx.beginPath(); this.ctx.arc(x, y, r, 0, Math.PI * 2); this.ctx.fill(); }
+  text(str, x, y, size, c = '#fff', align = 'center') {
+    const ctx = this.ctx;
+    ctx.fillStyle = c;
+    ctx.font = `bold ${size}px system-ui`;
+    ctx.textAlign = align;
+    ctx.textBaseline = 'middle';
+    ctx.fillText(str, x, y);
+  }
+  rrect(x, y, w, h, r, c) {
+    const ctx = this.ctx;
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+/* ============================================================
+   1. DINO RUN
+   ============================================================ */
+class DinoGame extends GameBase {
+  getAspectRatio() { return 3 / 4; }
+  getControls() { return 'tap'; }
+
+  start() {
+    if (!this._tapReady) {
+      this._tapReady = true;
+      let lastDown = 0;
+      this._tapHandler = (e) => {
+        const now = Date.now();
+        if (now - lastDown < 40) return;
+        lastDown = now;
+        if (e.cancelable) e.preventDefault();
+        if (!this._started || this.over || this.paused) return;
+        this.onTap();
+      };
+      this.canvas.addEventListener('touchstart', this._tapHandler, { passive: false });
+      this.canvas.addEventListener('mousedown', this._tapHandler);
+    }
+    super.start();
+  }
+
+  stop() {
+    if (this._tapHandler) {
+      this.canvas.removeEventListener('touchstart', this._tapHandler);
+      this.canvas.removeEventListener('mousedown', this._tapHandler);
+      this._tapHandler = null;
+    }
+    super.stop();
+  }
+
+  reset() {
+    this._prevW = this.W;
+    this._prevH = this.H;
+    this.dinoH = this.H * 0.16;
+    this.dinoW = this.dinoH * 0.9;
+    this.dinoX = this.W * 0.12;
+    this.groundH = this.H * 0.18;
+    this.groundY = this.H - this.groundH;
+    this.dinoY = this.groundY - this.dinoH;
+    this.vy = 0;
+    this.onGround = true;
+    this.jumpBuffer = 0;
+    this.gravity = this.H * 4.5;
+    this.jumpVel = -Math.sqrt(2 * this.gravity * this.H * 0.30);
+    this.obstacles = [];
+    this.obstacleTimer = 1.2;
+    this.speed = this.W * 0.55;
+    this.distance = 0;
+    this.score = 0;
+    this.setScore(0);
+    this.clouds = [];
+    for (let i = 0; i < 4; i++) {
+      this.clouds.push({
+        x: Math.random() * this.W,
+        y: this.H * 0.08 + Math.random() * this.H * 0.25,
+        size: this.H * 0.06 + Math.random() * this.H * 0.03,
+        speed: this.W * 0.05 + Math.random() * this.W * 0.03
+      });
+    }
+    this.mountains = [];
+    for (let i = 0; i < 4; i++) {
+      this.mountains.push({
+        x: i * (this.W * 0.4) - this.W * 0.2,
+        w: this.W * 0.35 + Math.random() * this.W * 0.15,
+        h: this.H * 0.18 + Math.random() * this.H * 0.12
+      });
+    }
+    this.trees = [];
+    for (let i = 0; i < 5; i++) {
+      this.trees.push({
+        x: Math.random() * this.W,
+        size: this.H * 0.07 + Math.random() * this.H * 0.03
+      });
+    }
+    this.runPhase = 0;
+    this.sunPhase = 0;
+  }
+
+  onResize() {
+    if (!this._started) return;
+    const oldW = this._prevW || this.W;
+    const oldH = this._prevH || this.H;
+    const sx = this.W / oldW;
+    const sy = this.H / oldH;
+    if (Math.abs(sx - 1) < 0.05 && Math.abs(sy - 1) < 0.05) return;
+    this.dinoY *= sy;
+    this.dinoX *= sx;
+    this.dinoH *= sy;
+    this.dinoW *= sx;
+    this.groundY *= sy;
+    this.groundH *= sy;
+    this.vy *= sy;
+    this.gravity *= sy;
+    this.jumpVel *= sy;
+    this.speed *= sx;
+    this.obstacles.forEach(o => { o.x *= sx; o.w *= sx; o.h *= sy; });
+    this.clouds.forEach(c => { c.x *= sx; c.y *= sy; c.size *= sy; c.speed *= sx; });
+    this.mountains.forEach(m => { m.x *= sx; m.w *= sx; m.h *= sy; });
+    this.trees.forEach(t => { t.x *= sx; t.size *= sy; });
+    this._prevW = this.W;
+    this._prevH = this.H;
+  }
+
+  update(dt) {
+    if (this.jumpBuffer > 0) this.jumpBuffer -= dt;
+    this.vy += this.gravity * dt;
+    this.dinoY += this.vy * dt;
+    const groundTop = this.groundY - this.dinoH;
+    if (this.dinoY >= groundTop) {
+      this.dinoY = groundTop;
+      this.vy = 0;
+      if (!this.onGround) {
+        this.onGround = true;
+        if (this.jumpBuffer > 0) {
+          this.jumpBuffer = 0;
+          this._jump();
+        }
+      }
+    } else {
+      this.onGround = false;
+    }
+    this.distance += dt * this.speed / 10;
+    const s = Math.floor(this.distance);
+    if (s !== this.score) { this.score = s; this.setScore(s); }
+    const baseSpeed = this.W * 0.55;
+    this.speed = baseSpeed + Math.min(this.W * 0.6, this.score * this.W * 0.008);
+    this.clouds.forEach(c => {
+      c.x -= c.speed * dt;
+      if (c.x < -c.size * 2) {
+        c.x = this.W + c.size;
+        c.y = this.H * 0.08 + Math.random() * this.H * 0.25;
+      }
+    });
+    this.mountains.forEach(m => {
+      m.x -= this.speed * 0.1 * dt;
+      if (m.x + m.w < 0) m.x += this.mountains.length * this.W * 0.4;
+    });
+    this.trees.forEach(t => {
+      t.x -= this.speed * 0.4 * dt;
+      if (t.x < -t.size * 2) {
+        t.x = this.W + Math.random() * this.W * 0.3;
+      }
+    });
+    this.obstacleTimer -= dt;
+    if (this.obstacleTimer <= 0) {
+      this._spawnObstacle();
+      this.obstacleTimer = Math.max(0.9, 1.8 - this.score * 0.015) + Math.random() * 0.5;
+    }
+    this.obstacles.forEach(o => o.x -= this.speed * dt);
+    this.obstacles = this.obstacles.filter(o => o.x + o.w > -10);
+    const dx1 = this.dinoX + this.dinoW * 0.15;
+    const dx2 = this.dinoX + this.dinoW * 0.85;
+    const dy1 = this.dinoY + this.dinoH * 0.1;
+    const dy2 = this.dinoY + this.dinoH * 0.95;
+    for (const o of this.obstacles) {
+      const ox1 = o.x + 3;
+      const ox2 = o.x + o.w - 3;
+      const oy1 = this.groundY - o.h + 2;
+      const oy2 = this.groundY;
+      if (dx2 > ox1 && dx1 < ox2 && dy2 > oy1 && dy1 < oy2) {
+        Audio.hit();
+        return this.gameOver(this.score);
+      }
+    }
+    this.runPhase += dt * (this.onGround ? Math.min(20, this.speed / this.W * 25) : 0);
+    this.sunPhase += dt * 0.3;
+  }
+
+  _jump() {
+    this.vy = this.jumpVel;
+    this.onGround = false;
+    Audio.jump();
+  }
+
+  _spawnObstacle() {
+    const r = Math.random();
+    let type;
+    if (r < 0.5) type = 'small';
+    else if (r < 0.8) type = 'big';
+    else type = 'double';
+    let w, h;
+    if (type === 'small') { w = this.W * 0.06; h = this.H * 0.09; }
+    else if (type === 'big') { w = this.W * 0.08; h = this.H * 0.14; }
+    else { w = this.W * 0.13; h = this.H * 0.1; }
+    this.obstacles.push({ x: this.W + 10, w, h, type });
+  }
+
+  onTap() {
+    if (!this._started) return;
+    if (this.onGround) {
+      this._jump();
+    } else {
+      this.jumpBuffer = 0.15;
+    }
+  }
+
+  render() {
+    const ctx = this.ctx;
+    const sky = ctx.createLinearGradient(0, 0, 0, this.groundY);
+    sky.addColorStop(0, '#0f1530');
+    sky.addColorStop(0.6, '#1a2545');
+    sky.addColorStop(1, '#3a4a70');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, this.W, this.groundY);
+    const sunX = this.W * 0.78;
+    const sunY = this.H * 0.12 + Math.sin(this.sunPhase) * 4;
+    const sunR = this.H * 0.05;
+    ctx.fillStyle = 'rgba(251, 191, 36, 0.15)';
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, sunR * 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
+    ctx.fill();
+    this.mountains.forEach(m => {
+      ctx.fillStyle = '#1a2340';
+      ctx.beginPath();
+      ctx.moveTo(m.x, this.groundY);
+      ctx.lineTo(m.x + m.w / 2, this.groundY - m.h);
+      ctx.lineTo(m.x + m.w, this.groundY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#3a4a6a';
+      const capW = m.w * 0.15;
+      const capH = m.h * 0.25;
+      ctx.beginPath();
+      ctx.moveTo(m.x + m.w / 2 - capW, this.groundY - m.h + capH);
+      ctx.lineTo(m.x + m.w / 2, this.groundY - m.h);
+      ctx.lineTo(m.x + m.w / 2 + capW, this.groundY - m.h + capH);
+      ctx.lineTo(m.x + m.w / 2 + capW * 0.5, this.groundY - m.h + capH * 0.7);
+      ctx.lineTo(m.x + m.w / 2, this.groundY - m.h + capH * 0.9);
+      ctx.lineTo(m.x + m.w / 2 - capW * 0.5, this.groundY - m.h + capH * 0.7);
+      ctx.closePath();
+      ctx.fill();
+    });
+    this.clouds.forEach(c => this._drawCloud(c.x, c.y, c.size));
+    this.trees.forEach(t => this._drawTree(t.x, this.groundY, t.size));
+    this.rect(0, this.groundY, this.W, this.groundH, '#0e1420');
+    this.rect(0, this.groundY, this.W, 2, '#3a7a3a');
+    const dashW = this.W * 0.04;
+    const dashGap = this.W * 0.03;
+    const dashOffset = (this.distance * 10) % (dashW + dashGap);
+    for (let i = -1; i < this.W / (dashW + dashGap) + 1; i++) {
+      this.rect(i * (dashW + dashGap) - dashOffset, this.groundY + this.groundH * 0.5, dashW, 2, 'rgba(34,211,238,0.15)');
+    }
+    this._drawDino();
+    this.obstacles.forEach(o => this._drawCactus(o));
+    this.text(Math.floor(this.distance) + 'm', this.W - this.W * 0.03, this.H * 0.04, this.H * 0.025, '#22d3ee', 'right');
+  }
+
+  _drawCloud(x, y, size) {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.beginPath();
+    ctx.arc(x, y, size * 0.55, 0, Math.PI * 2);
+    ctx.arc(x + size * 0.6, y + size * 0.1, size * 0.45, 0, Math.PI * 2);
+    ctx.arc(x + size * 1.1, y, size * 0.5, 0, Math.PI * 2);
+    ctx.arc(x + size * 0.5, y - size * 0.2, size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  _drawTree(x, baseY, size) {
+    this.rect(x - size * 0.08, baseY - size * 0.55, size * 0.16, size * 0.55, '#2a1810');
+    this.circle(x, baseY - size * 0.7, size * 0.5, '#1a4a2a');
+    this.circle(x - size * 0.3, baseY - size * 0.5, size * 0.35, '#1a5a2a');
+    this.circle(x + size * 0.3, baseY - size * 0.5, size * 0.35, '#1a5a2a');
+  }
+
+  _drawDino() {
+    const ctx = this.ctx;
+    const x = this.dinoX;
+    const y = this.dinoY;
+    const w = this.dinoW;
+    const h = this.dinoH;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(x + w * 0.5, this.groundY + 1, w * 0.55, h * 0.05, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const phase = Math.sin(this.runPhase);
+    const liftBack = this.onGround ? Math.max(0, phase) * h * 0.06 : h * 0.08;
+    const liftFront = this.onGround ? Math.max(0, -phase) * h * 0.06 : h * 0.08;
+    const backLegColor = '#065f46';
+    this.rrect(x + w * 0.30, y + h * 0.55, w * 0.20, h * 0.26, w * 0.07, backLegColor);
+    this.rrect(x + w * 0.34, y + h * 0.74 - liftBack, w * 0.10, h * 0.17, w * 0.03, backLegColor);
+    this.rrect(x + w * 0.28, y + h * 0.88 - liftBack, w * 0.24, h * 0.07, w * 0.03, backLegColor);
+    const grad = ctx.createLinearGradient(x, y, x, y + h);
+    grad.addColorStop(0, '#34d399');
+    grad.addColorStop(0.5, '#10b981');
+    grad.addColorStop(1, '#059669');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.98, y + h * 0.28);
+    ctx.quadraticCurveTo(x + w * 0.96, y + h * 0.16, x + w * 0.86, y + h * 0.14);
+    ctx.quadraticCurveTo(x + w * 0.76, y + h * 0.12, x + w * 0.70, y + h * 0.18);
+    ctx.quadraticCurveTo(x + w * 0.66, y + h * 0.22, x + w * 0.62, y + h * 0.30);
+    ctx.quadraticCurveTo(x + w * 0.55, y + h * 0.33, x + w * 0.45, y + h * 0.36);
+    ctx.quadraticCurveTo(x + w * 0.35, y + h * 0.38, x + w * 0.28, y + h * 0.40);
+    ctx.quadraticCurveTo(x + w * 0.15, y + h * 0.35, x + w * 0.02, y + h * 0.20);
+    ctx.quadraticCurveTo(x + w * 0.10, y + h * 0.32, x + w * 0.22, y + h * 0.44);
+    ctx.quadraticCurveTo(x + w * 0.38, y + h * 0.55, x + w * 0.52, y + h * 0.62);
+    ctx.quadraticCurveTo(x + w * 0.62, y + h * 0.64, x + w * 0.68, y + h * 0.58);
+    ctx.quadraticCurveTo(x + w * 0.74, y + h * 0.50, x + w * 0.80, y + h * 0.44);
+    ctx.quadraticCurveTo(x + w * 0.87, y + h * 0.42, x + w * 0.92, y + h * 0.40);
+    ctx.quadraticCurveTo(x + w * 0.96, y + h * 0.37, x + w * 0.98, y + h * 0.32);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(167, 243, 208, 0.4)';
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.32, y + h * 0.45);
+    ctx.quadraticCurveTo(x + w * 0.42, y + h * 0.56, x + w * 0.52, y + h * 0.62);
+    ctx.quadraticCurveTo(x + w * 0.60, y + h * 0.64, x + w * 0.66, y + h * 0.58);
+    ctx.quadraticCurveTo(x + w * 0.56, y + h * 0.60, x + w * 0.46, y + h * 0.54);
+    ctx.quadraticCurveTo(x + w * 0.36, y + h * 0.46, x + w * 0.32, y + h * 0.45);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#065f46';
+    for (let i = 0; i < 4; i++) {
+      const sx = x + w * (0.60 - i * 0.09);
+      const sy = y + h * (0.18 + i * 0.05);
+      ctx.beginPath();
+      ctx.moveTo(sx - w * 0.02, sy + h * 0.04);
+      ctx.lineTo(sx, sy - h * 0.015);
+      ctx.lineTo(sx + w * 0.02, sy + h * 0.04);
+      ctx.closePath();
+      ctx.fill();
+    }
+    const frontLegColor = '#10b981';
+    this.rrect(x + w * 0.48, y + h * 0.55, w * 0.20, h * 0.26, w * 0.07, frontLegColor);
+    this.rrect(x + w * 0.50, y + h * 0.57, w * 0.06, h * 0.20, w * 0.02, '#34d399');
+    this.rrect(x + w * 0.52, y + h * 0.74 - liftFront, w * 0.10, h * 0.17, w * 0.03, frontLegColor);
+    this.rrect(x + w * 0.46, y + h * 0.88 - liftFront, w * 0.24, h * 0.07, w * 0.03, frontLegColor);
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = w * 0.035;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.73, y + h * 0.48);
+    ctx.lineTo(x + w * 0.71, y + h * 0.54);
+    ctx.lineTo(x + w * 0.67, y + h * 0.56);
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.82, y + h * 0.22, w * 0.055, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0a0e1a';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.835, y + h * 0.22, w * 0.028, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.828, y + h * 0.215, w * 0.01, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#064e3b';
+    ctx.lineWidth = Math.max(1.5, w * 0.015);
+    ctx.beginPath();
+    if (this.onGround) {
+      ctx.moveTo(x + w * 0.96, y + h * 0.30);
+      ctx.quadraticCurveTo(x + w * 0.90, y + h * 0.33, x + w * 0.86, y + h * 0.32);
+    } else {
+      ctx.moveTo(x + w * 0.96, y + h * 0.30);
+      ctx.quadraticCurveTo(x + w * 0.90, y + h * 0.36, x + w * 0.84, y + h * 0.33);
+    }
+    ctx.stroke();
+    ctx.fillStyle = '#064e3b';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.92, y + h * 0.25, w * 0.012, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  _drawCactus(o) {
+    if (o.type === 'double') {
+      this._drawCactusSingle(o.x, o.w * 0.45, o.h * 0.8, true);
+      this._drawCactusSingle(o.x + o.w * 0.55, o.w * 0.45, o.h, false);
+    } else {
+      this._drawCactusSingle(o.x, o.w, o.h, true);
+    }
+  }
+
+  _drawCactusSingle(x, w, h, showArms) {
+    const ctx = this.ctx;
+    const baseY = this.groundY;
+    const trunkW = w * 0.4;
+    const tx = x + (w - trunkW) / 2;
+    const ty = baseY - h;
+    const radius = trunkW * 0.25;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(x + w / 2, baseY + 1, w * 0.4, h * 0.04, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const grad = ctx.createLinearGradient(tx, ty, tx + trunkW, ty);
+    grad.addColorStop(0, '#2a6a2a');
+    grad.addColorStop(0.5, '#3a8a3a');
+    grad.addColorStop(1, '#1a5a1a');
+    this.rrect(tx, ty, trunkW, h, radius, grad);
+    this.rect(tx + trunkW * 0.15, ty + radius, trunkW * 0.12, h - radius * 2, 'rgba(255,255,255,0.18)');
+    if (showArms && w > this.W * 0.04) {
+      const armY1 = ty + h * 0.35;
+      const armW = trunkW * 0.7;
+      const armThick = trunkW * 0.5;
+      this.rrect(tx - armW, armY1, armW + trunkW * 0.2, armThick, armThick * 0.3, grad);
+      this.rrect(tx - armW, armY1 - h * 0.15, armThick, h * 0.2, armThick * 0.3, grad);
+      const armY2 = ty + h * 0.5;
+      this.rrect(tx + trunkW - trunkW * 0.2, armY2, armW, armThick, armThick * 0.3, grad);
+      this.rrect(tx + trunkW + armW - armThick, armY2 - h * 0.12, armThick, h * 0.17, armThick * 0.3, grad);
+    }
+    ctx.fillStyle = '#0a3a0a';
+    for (let i = 0; i < 6; i++) {
+      const sy = ty + radius + i * (h - radius * 2) / 6;
+      ctx.fillRect(tx - 1, sy, 1.5, 2);
+      ctx.fillRect(tx + trunkW - 0.5, sy + 1, 1.5, 2);
+    }
+    for (let i = 0; i < 3; i++) {
+      ctx.fillRect(tx + trunkW * (0.3 + i * 0.2), ty - 2, 1.5, 2);
+    }
+  }
+}
+
+/* ============================================================
+   2. FLAPPY BIRD
+   ============================================================ */
+class FlappyGame extends GameBase {
+  getAspectRatio() { return 9 / 16; }
+  getControls() { return 'tap'; }
+
+  start() {
+    // Instant tap handler (touchstart, bukan touchend → tanpa delay)
+    if (!this._tapReady) {
+      this._tapReady = true;
+      let lastDown = 0;
+      this._tapHandler = (e) => {
+        const now = Date.now();
+        if (now - lastDown < 40) return;
+        lastDown = now;
+        if (e.cancelable) e.preventDefault();
+        if (!this._started || this.over || this.paused) return;
+        this.onTap();
+      };
+      this.canvas.addEventListener('touchstart', this._tapHandler, { passive: false });
+      this.canvas.addEventListener('mousedown', this._tapHandler);
+    }
+    super.start();
+  }
+
+  stop() {
+    if (this._tapHandler) {
+      this.canvas.removeEventListener('touchstart', this._tapHandler);
+      this.canvas.removeEventListener('mousedown', this._tapHandler);
+      this._tapHandler = null;
+    }
+    super.stop();
+  }
+
+  reset() {
+    this._prevW = this.W;
+    this._prevH = this.H;
+
+    this.birdH = this.H * 0.09;
+    this.birdW = this.birdH * 1.3;
+    this.birdX = this.W * 0.28;
+    this.birdY = this.H * 0.38;
+    this.vy = 0;
+    this.gravity = this.H * 2.4;
+    this.flapVel = -this.H * 0.68;
+    this.wingPhase = 0;
+
+    this.pipes = [];
+    this.timer = 1.4;
+    this.gap = this.H * 0.26;
+    this.pipeW = this.W * 0.15;
+    this.speed = this.W * 0.45;
+    this.score = 0;
+    this.setScore(0);
+
+    // Parallax background (sama seperti Dino)
+    this.clouds = [];
+    for (let i = 0; i < 4; i++) {
+      this.clouds.push({
+        x: Math.random() * this.W,
+        y: this.H * 0.08 + Math.random() * this.H * 0.25,
+        size: this.H * 0.06 + Math.random() * this.H * 0.03,
+        speed: this.W * 0.05 + Math.random() * this.W * 0.03
+      });
+    }
+    this.mountains = [];
+    for (let i = 0; i < 4; i++) {
+      this.mountains.push({
+        x: i * (this.W * 0.4) - this.W * 0.2,
+        w: this.W * 0.35 + Math.random() * this.W * 0.15,
+        h: this.H * 0.18 + Math.random() * this.H * 0.12
+      });
+    }
+    this.trees = [];
+    for (let i = 0; i < 5; i++) {
+      this.trees.push({
+        x: Math.random() * this.W,
+        size: this.H * 0.07 + Math.random() * this.H * 0.03
+      });
+    }
+    this.sunPhase = 0;
+  }
+
+  onResize() {
+    if (!this._started) return;
+    const oldW = this._prevW || this.W;
+    const oldH = this._prevH || this.H;
+    const sx = this.W / oldW;
+    const sy = this.H / oldH;
+    if (Math.abs(sx - 1) < 0.05 && Math.abs(sy - 1) < 0.05) return;
+
+    this.birdX *= sx;
+    this.birdY *= sy;
+    this.birdH *= sy;
+    this.birdW *= sx;
+    this.vy *= sy;
+    this.gravity *= sy;
+    this.flapVel *= sy;
+    this.gap *= sy;
+    this.pipeW *= sx;
+    this.speed *= sx;
+
+    this.pipes.forEach(p => {
+      p.x *= sx;
+      p.y *= sy;
+      p.gap *= sy;
+    });
+    this.clouds.forEach(c => { c.x *= sx; c.y *= sy; c.size *= sy; c.speed *= sx; });
+    this.mountains.forEach(m => { m.x *= sx; m.w *= sx; m.h *= sy; });
+    this.trees.forEach(t => { t.x *= sx; t.size *= sy; });
+
+    this._prevW = this.W;
+    this._prevH = this.H;
+  }
+
+  update(dt) {
+    // Physics
+    this.vy += this.gravity * dt;
+    this.birdY += this.vy * dt;
+
+    if (this.birdY < 0) { this.birdY = 0; this.vy = 0; }
+    if (this.birdY + this.birdH > this.H) {
+      Audio.hit();
+      return this.gameOver(this.score);
+    }
+
+    this.wingPhase += dt * 15;
+
+    // Spawn pipes
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      const minY = this.H * 0.12;
+      const maxY = this.H * 0.88 - this.gap;
+      const py = NanoGames.rand(Math.floor(minY), Math.floor(Math.max(minY + 1, maxY)));
+      this.pipes.push({ x: this.W + 10, y: py, gap: this.gap, passed: false });
+      this.timer = Math.max(1.2, 1.7 - this.score * 0.02);
+    }
+    this.pipes.forEach(p => p.x -= this.speed * dt);
+    this.pipes = this.pipes.filter(p => p.x + this.pipeW > -20);
+
+    // Collision & scoring
+    const bx1 = this.birdX + this.birdW * 0.15;
+    const bx2 = this.birdX + this.birdW * 0.85;
+    const by1 = this.birdY + this.birdH * 0.15;
+    const by2 = this.birdY + this.birdH * 0.85;
+
+    for (const p of this.pipes) {
+      const px1 = p.x;
+      const px2 = p.x + this.pipeW;
+
+      if (!p.passed && px2 < this.birdX) {
+        p.passed = true;
+        this.score++;
+        this.setScore(this.score);
+        Audio.score();
+      }
+      if (bx2 > px1 && bx1 < px2) {
+        if (by1 < p.y || by2 > p.y + p.gap) {
+          Audio.hit();
+          return this.gameOver(this.score);
+        }
+      }
+    }
+
+    // Parallax
+    this.clouds.forEach(c => {
+      c.x -= c.speed * dt;
+      if (c.x < -c.size * 2) {
+        c.x = this.W + c.size;
+        c.y = this.H * 0.08 + Math.random() * this.H * 0.25;
+      }
+    });
+    this.mountains.forEach(m => {
+      m.x -= this.speed * 0.1 * dt;
+      if (m.x + m.w < 0) m.x += this.mountains.length * this.W * 0.4;
+    });
+    this.trees.forEach(t => {
+      t.x -= this.speed * 0.4 * dt;
+      if (t.x < -t.size * 2) {
+        t.x = this.W + Math.random() * this.W * 0.3;
+      }
+    });
+    this.sunPhase += dt * 0.3;
+  }
+
+  onTap() {
+    if (!this._started) return;
+    this.vy = this.flapVel;
+    Audio.jump();
+  }
+
+  render() {
+    const ctx = this.ctx;
+
+    // Sky gradient (sama seperti Dino)
+    const sky = ctx.createLinearGradient(0, 0, 0, this.H);
+    sky.addColorStop(0, '#0f1530');
+    sky.addColorStop(0.6, '#1a2545');
+    sky.addColorStop(1, '#3a4a70');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, this.W, this.H);
+
+    // Sun
+    const sunX = this.W * 0.78;
+    const sunY = this.H * 0.12 + Math.sin(this.sunPhase) * 4;
+    const sunR = this.H * 0.05;
+    ctx.fillStyle = 'rgba(251, 191, 36, 0.15)';
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, sunR * 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Mountains
+    this.mountains.forEach(m => {
+      ctx.fillStyle = '#1a2340';
+      ctx.beginPath();
+      ctx.moveTo(m.x, this.H);
+      ctx.lineTo(m.x + m.w / 2, this.H - m.h);
+      ctx.lineTo(m.x + m.w, this.H);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#3a4a6a';
+      const capW = m.w * 0.15;
+      const capH = m.h * 0.25;
+      ctx.beginPath();
+      ctx.moveTo(m.x + m.w / 2 - capW, this.H - m.h + capH);
+      ctx.lineTo(m.x + m.w / 2, this.H - m.h);
+      ctx.lineTo(m.x + m.w / 2 + capW, this.H - m.h + capH);
+      ctx.closePath();
+      ctx.fill();
+    });
+
+    // Clouds
+    this.clouds.forEach(c => this._drawCloud(c.x, c.y, c.size));
+
+    // Trees
+    this.trees.forEach(t => this._drawTree(t.x, this.H, t.size));
+
+    // Pipes
+    this.pipes.forEach(p => this._drawPipe(p));
+
+    // Bird
+    this._drawBird();
+
+    // Score
+    this.text(this.score, this.W / 2, this.H * 0.08, this.H * 0.06, '#fff');
+  }
+
+  _drawCloud(x, y, size) {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.beginPath();
+    ctx.arc(x, y, size * 0.55, 0, Math.PI * 2);
+    ctx.arc(x + size * 0.6, y + size * 0.1, size * 0.45, 0, Math.PI * 2);
+    ctx.arc(x + size * 1.1, y, size * 0.5, 0, Math.PI * 2);
+    ctx.arc(x + size * 0.5, y - size * 0.2, size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  _drawTree(x, baseY, size) {
+    this.rect(x - size * 0.08, baseY - size * 0.55, size * 0.16, size * 0.55, '#2a1810');
+    this.circle(x, baseY - size * 0.7, size * 0.5, '#1a4a2a');
+    this.circle(x - size * 0.3, baseY - size * 0.5, size * 0.35, '#1a5a2a');
+    this.circle(x + size * 0.3, baseY - size * 0.5, size * 0.35, '#1a5a2a');
+  }
+
+  _drawPipe(p) {
+    const ctx = this.ctx;
+    const w = this.pipeW;
+    const x = p.x;
+    const topH = p.y;
+    const botY = p.y + p.gap;
+    const botH = this.H - botY;
+    const capH = w * 0.35;
+    const capExtend = w * 0.08;
+
+    const drawSeg = (px, py, pw, ph, isCap) => {
+      const grad = ctx.createLinearGradient(px, 0, px + pw, 0);
+      grad.addColorStop(0, '#0a3a0a');
+      grad.addColorStop(0.2, '#3a9a4a');
+      grad.addColorStop(0.4, '#5ec06e');
+      grad.addColorStop(0.6, '#4ab05e');
+      grad.addColorStop(0.85, '#2a7a2a');
+      grad.addColorStop(1, '#0a2a0a');
+      ctx.fillStyle = grad;
+      if (isCap) {
+        this.rrect(px, py, pw, ph, 4, grad);
+      } else {
+        ctx.fillRect(px, py, pw, ph);
+      }
+      // Left highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.fillRect(px + pw * 0.25, py + (isCap ? 3 : 0), pw * 0.08, ph - (isCap ? 6 : 0));
+      // Right shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(px + pw * 0.78, py + (isCap ? 3 : 0), pw * 0.1, ph - (isCap ? 6 : 0));
+      // Outline
+      ctx.strokeStyle = '#0a2a0a';
+      ctx.lineWidth = Math.max(1, w * 0.025);
+      if (isCap) {
+        ctx.beginPath();
+        ctx.moveTo(px + 4, py);
+        ctx.lineTo(px + pw - 4, py);
+        ctx.arcTo(px + pw, py, px + pw, py + 4, 4);
+        ctx.lineTo(px + pw, py + ph - 4);
+        ctx.arcTo(px + pw, py + ph, px + pw - 4, py + ph, 4);
+        ctx.lineTo(px + 4, py + ph);
+        ctx.arcTo(px, py + ph, px, py + ph - 4, 4);
+        ctx.lineTo(px, py + 4);
+        ctx.arcTo(px, py, px + 4, py, 4);
+        ctx.closePath();
+        ctx.stroke();
+      } else {
+        ctx.strokeRect(px, py, pw, ph);
+      }
+    };
+
+    // Top pipe: body + cap at bottom (near gap)
+    drawSeg(x, 0, w, topH - capH + 2, false);
+    drawSeg(x - capExtend, topH - capH, w + capExtend * 2, capH, true);
+
+    // Bottom pipe: cap at top (near gap) + body below
+    drawSeg(x - capExtend, botY, w + capExtend * 2, capH, true);
+    drawSeg(x, botY + capH - 2, w, botH - capH + 2, false);
+  }
+
+  _drawBird() {
+    const ctx = this.ctx;
+    const x = this.birdX;
+    const y = this.birdY;
+    const w = this.birdW;
+    const h = this.birdH;
+
+    // Rotation based on velocity (nose down when falling)
+    const angle = Math.atan2(this.vy, this.speed * 2.5);
+    const tiltAngle = NanoGames.clamp(angle, -0.5, 1.0);
+
+    ctx.save();
+    ctx.translate(x + w / 2, y + h / 2);
+    ctx.rotate(tiltAngle);
+    ctx.translate(-(x + w / 2), -(y + h / 2));
+
+    // Drop shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(x + w * 0.5 + 2, y + h * 0.62 + 2, w * 0.42, h * 0.36, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tail (behind body)
+    ctx.fillStyle = '#0c4a6e';
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.12, y + h * 0.45);
+    ctx.lineTo(x - w * 0.12, y + h * 0.32);
+    ctx.lineTo(x - w * 0.08, y + h * 0.5);
+    ctx.lineTo(x - w * 0.14, y + h * 0.6);
+    ctx.lineTo(x + w * 0.14, y + h * 0.58);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#083344';
+    ctx.lineWidth = Math.max(1, w * 0.02);
+    ctx.stroke();
+
+    // Body (blue/cyan bird — sesuai ikon 🐦)
+    const grad = ctx.createLinearGradient(x, y, x, y + h);
+    grad.addColorStop(0, '#38bdf8');
+    grad.addColorStop(0.5, '#0ea5e9');
+    grad.addColorStop(1, '#0369a1');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(x + w * 0.48, y + h * 0.52, w * 0.4, h * 0.38, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#082f49';
+    ctx.lineWidth = Math.max(1, w * 0.025);
+    ctx.stroke();
+
+    // Belly highlight
+    ctx.fillStyle = 'rgba(186, 230, 253, 0.55)';
+    ctx.beginPath();
+    ctx.ellipse(x + w * 0.48, y + h * 0.65, w * 0.28, h * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head cap (darker top)
+    ctx.fillStyle = '#0c4a6e';
+    ctx.beginPath();
+    ctx.ellipse(x + w * 0.62, y + h * 0.28, w * 0.14, h * 0.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Wing (flapping)
+    const wingOffset = Math.sin(this.wingPhase) * h * 0.12;
+    ctx.fillStyle = '#0284c7';
+    ctx.beginPath();
+    ctx.ellipse(x + w * 0.42, y + h * 0.5 + wingOffset, w * 0.2, h * 0.16, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0c4a6e';
+    ctx.beginPath();
+    ctx.ellipse(x + w * 0.4, y + h * 0.52 + wingOffset, w * 0.13, h * 0.09, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Beak (orange)
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.85, y + h * 0.48);
+    ctx.lineTo(x + w * 1.12, y + h * 0.52);
+    ctx.lineTo(x + w * 0.85, y + h * 0.58);
+    ctx.closePath();
+    ctx.fill();
+    // Beak bottom (darker)
+    ctx.fillStyle = '#c2410c';
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.85, y + h * 0.54);
+    ctx.lineTo(x + w * 1.12, y + h * 0.52);
+    ctx.lineTo(x + w * 0.85, y + h * 0.58);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#7c2d12';
+    ctx.lineWidth = Math.max(1, w * 0.015);
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.85, y + h * 0.48);
+    ctx.lineTo(x + w * 1.12, y + h * 0.52);
+    ctx.lineTo(x + w * 0.85, y + h * 0.58);
+    ctx.stroke();
+
+    // Eye white
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.72, y + h * 0.4, w * 0.11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#082f49';
+    ctx.lineWidth = Math.max(1, w * 0.015);
+    ctx.stroke();
+
+    // Pupil
+    ctx.fillStyle = '#0a0e1a';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.75, y + h * 0.41, w * 0.055, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eye highlight
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.74, y + h * 0.4, w * 0.02, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+/* ============================================================
+   3. SNAKE
+   ============================================================ */
+class SnakeGame extends GameBase {
+  constructor(c) { super(c); this.GRID = 20; }
+  getAspectRatio() { return 1; }
+  getControls() { return 'dpad'; }
+  reset() {
+    this.snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+    this.dir = {x:1,y:0}; this.nextDir = {x:1,y:0};
+    this.food = this._spawn();
+    this.score = 0; this.stepMs = 150; this.accum = 0;
+    this.alive = true;
+    this.setScore(0);
+    this._calc();
+  }
+  _calc() {
+    const s = Math.min(this.W, this.H);
+    this.cs = s / this.GRID;
+    this.ox = (this.W - s) / 2;
+    this.oy = (this.H - s) / 2;
+  }
+  onResize() { this._calc(); }
+  _spawn() {
+    for (let i = 0; i < 500; i++) {
+      const x = NanoGames.rand(0, this.GRID - 1);
+      const y = NanoGames.rand(0, this.GRID - 1);
+      if (!this.snake.some(s => s.x === x && s.y === y)) return {x,y};
+    }
+    return {x:0,y:0};
+  }
+  update(dt) {
+    if (!this.alive) return;
+    this.accum += dt * 1000;
+    if (this.accum < this.stepMs) return;
+    this.accum = 0;
+    this.dir = this.nextDir;
+    const h = this.snake[0];
+    const nx = h.x + this.dir.x, ny = h.y + this.dir.y;
+    if (nx < 0 || nx >= this.GRID || ny < 0 || ny >= this.GRID) return this._die();
+    for (let i = 0; i < this.snake.length - 1; i++) {
+      if (this.snake[i].x === nx && this.snake[i].y === ny) return this._die();
+    }
+    this.snake.unshift({x:nx,y:ny});
+    if (nx === this.food.x && ny === this.food.y) {
+      this.score++; this.setScore(this.score);
+      this.food = this._spawn();
+      this.stepMs = Math.max(60, 150 - this.score * 3);
+      Audio.eat();
+    } else this.snake.pop();
+  }
+  _die() {
+    this.alive = false; Audio.hit();
+    this.setTimeout(() => this.gameOver(this.score), 300);
+  }
+  render() {
+    this.bg();
+    const { cs, ox, oy, GRID, ctx } = this;
+    ctx.fillStyle = '#0b0f1c';
+    ctx.fillRect(ox, oy, cs * GRID, cs * GRID);
+    this.circle(ox + this.food.x * cs + cs/2, oy + this.food.y * cs + cs/2, cs*0.36, '#f87171');
+    this.snake.forEach((s, i) => {
+      const t = 1 - (i / this.snake.length) * 0.6;
+      const c = i === 0 ? '#22d3ee' : `rgb(34,${Math.round(180+75*t)},${Math.round(100+155*t)})`;
+      this.rrect(ox + s.x * cs + 2, oy + s.y * cs + 2, cs - 4, cs - 4, cs*0.22, c);
+    });
+  }
+  onInput(a, st) {
+    if (st !== 'press' || !this.alive) return;
+    const m = { up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0} };
+    const n = m[a];
+    if (!n) return;
+    if (n.x === -this.dir.x && n.y === -this.dir.y) return;
+    this.nextDir = n;
+  }
+}
+
+/* ============================================================
+   4. BREAKOUT
+   ============================================================ */
+class BreakoutGame extends GameBase {
+  getAspectRatio() { return 9 / 16; }
+  getControls() { return 'drag-h'; }
+
+  reset() {
+    this._prevW = this.W;
+    this._prevH = this.H;
+
+    // Paddle
+    this.pw = this.W * 0.24;
+    this.ph = this.H * 0.022;
+    this.px = this.W / 2 - this.pw / 2;
+    this.py = this.H - this.H * 0.08;
+
+    // Ball
+    this.br = this.W * 0.022;
+    this.bx = this.W / 2;
+    this.by = this.H * 0.85;
+    this.bdx = this.W * 0.55;
+    this.bdy = -this.W * 0.7;
+
+    this.score = 0;
+    this.lives = 3;
+    this.setScore(0);
+
+    this._buildBricks();
+  }
+
+  _buildBricks() {
+    this.bricks = [];
+    const cols = 7;
+    const rows = 6;
+    const paddingX = this.W * 0.03;
+    const paddingTop = this.H * 0.07;
+    const brickGap = this.W * 0.012;
+    const rowGap = this.H * 0.01;
+    const totalW = this.W - paddingX * 2 - brickGap * (cols - 1);
+    const bw = totalW / cols;
+    const bh = this.H * 0.038;
+
+    // Row colors — pelangi
+    const rowColors = ['#ef4444', '#f97316', '#fbbf24', '#22c55e', '#06b6d4', '#a855f7'];
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        this.bricks.push({
+          x: paddingX + c * (bw + brickGap),
+          y: paddingTop + r * (bh + rowGap),
+          w: bw,
+          h: bh,
+          color: rowColors[r] || '#22d3ee'
+        });
+      }
+    }
+  }
+
+  onResize() {
+    if (!this._started) return;
+    const oldW = this._prevW || this.W;
+    const oldH = this._prevH || this.H;
+    const sx = this.W / oldW;
+    const sy = this.H / oldH;
+    if (Math.abs(sx - 1) < 0.05 && Math.abs(sy - 1) < 0.05) return;
+
+    this.pw *= sx;
+    this.ph *= sy;
+    this.px *= sx;
+    this.py *= sy;
+    this.br *= sx;
+    this.bx *= sx;
+    this.by *= sy;
+    this.bdx *= sx;
+    this.bdy *= sy;
+
+    this.bricks.forEach(b => {
+      b.x *= sx;
+      b.y *= sy;
+      b.w *= sx;
+      b.h *= sy;
+    });
+
+    this._prevW = this.W;
+    this._prevH = this.H;
+  }
+
+  update(dt) {
+    this.bx += this.bdx * dt;
+    this.by += this.bdy * dt;
+
+    // Wall bounce
+    if (this.bx - this.br < 0) {
+      this.bx = this.br;
+      this.bdx = Math.abs(this.bdx);
+      Audio.tap();
+    }
+    if (this.bx + this.br > this.W) {
+      this.bx = this.W - this.br;
+      this.bdx = -Math.abs(this.bdx);
+      Audio.tap();
+    }
+    if (this.by - this.br < 0) {
+      this.by = this.br;
+      this.bdy = Math.abs(this.bdy);
+      Audio.tap();
+    }
+
+    // Paddle collision (only when ball moving down)
+    if (this.bdy > 0 &&
+        this.by + this.br >= this.py &&
+        this.by - this.br <= this.py + this.ph &&
+        this.bx + this.br > this.px &&
+        this.bx - this.br < this.px + this.pw) {
+      // Bounce angle depends on hit position (-1..+1)
+      const hitPos = (this.bx - (this.px + this.pw / 2)) / (this.pw / 2);
+      const maxAngle = Math.PI / 3;
+      const angle = hitPos * maxAngle;
+      const speed = Math.min(Math.hypot(this.bdx, this.bdy) * 1.02, this.W * 1.3);
+      this.bdx = Math.sin(angle) * speed;
+      this.bdy = -Math.abs(Math.cos(angle) * speed);
+      this.by = this.py - this.br - 1;
+      Audio.tap();
+    }
+
+    // Ball lost
+    if (this.by - this.br > this.H) {
+      this.lives--;
+      Audio.hit();
+      if (this.lives <= 0) return this.gameOver(this.score);
+      this._resetBall();
+    }
+
+    // Brick collision
+    for (let i = this.bricks.length - 1; i >= 0; i--) {
+      const b = this.bricks[i];
+      if (this.bx + this.br > b.x && this.bx - this.br < b.x + b.w &&
+          this.by + this.br > b.y && this.by - this.br < b.y + b.h) {
+        // Determine bounce side (use closest edge)
+        const dL = Math.abs(this.bx - b.x);
+        const dR = Math.abs(this.bx - (b.x + b.w));
+        const dT = Math.abs(this.by - b.y);
+        const dB = Math.abs(this.by - (b.y + b.h));
+        const min = Math.min(dL, dR, dT, dB);
+        if (min === dL) { this.bdx = -Math.abs(this.bdx); this.bx = b.x - this.br; }
+        else if (min === dR) { this.bdx = Math.abs(this.bdx); this.bx = b.x + b.w + this.br; }
+        else if (min === dT) { this.bdy = -Math.abs(this.bdy); this.by = b.y - this.br; }
+        else { this.bdy = Math.abs(this.bdy); this.by = b.y + b.h + this.br; }
+
+        this.bricks.splice(i, 1);
+        this.score++;
+        this.setScore(this.score);
+        Audio.score();
+        break;
+      }
+    }
+
+    if (this.bricks.length === 0) return this.gameOver(this.score);
+  }
+
+  _resetBall() {
+    this.bx = this.W / 2;
+    this.by = this.H * 0.85;
+    this.bdx = (Math.random() > 0.5 ? 1 : -1) * this.W * 0.55;
+    this.bdy = -this.W * 0.7;
+  }
+
+  onDrag(nx, ny, phase) {
+    if (phase === 'end') return; // FIX: raket tetap di posisi terakhir
+    this.px = NanoGames.clamp(nx * this.W - this.pw / 2, 0, this.W - this.pw);
+  }
+
+  render() {
+    this.bg();
+
+    // Bricks with gradient + highlight
+    this.bricks.forEach(b => {
+      const grad = this.ctx.createLinearGradient(b.x, b.y, b.x, b.y + b.h);
+      grad.addColorStop(0, b.color);
+      grad.addColorStop(1, this._darken(b.color));
+      this.rrect(b.x, b.y, b.w, b.h, Math.min(3, b.h * 0.3), grad);
+      this.ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      this.ctx.fillRect(b.x + 2, b.y + 1, b.w - 4, Math.max(1, b.h * 0.15));
+    });
+
+    // Paddle (gradient cyan)
+    const pgrad = this.ctx.createLinearGradient(this.px, this.py, this.px, this.py + this.ph);
+    pgrad.addColorStop(0, '#67e8f9');
+    pgrad.addColorStop(0.5, '#22d3ee');
+    pgrad.addColorStop(1, '#0891b2');
+    this.rrect(this.px, this.py, this.pw, this.ph, this.ph / 2, pgrad);
+    this.ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    this.ctx.fillRect(this.px + this.ph * 0.4, this.py + 1, this.pw - this.ph * 0.8, Math.max(1, this.ph * 0.25));
+
+    // Ball with glow
+    this.circle(this.bx, this.by, this.br * 2, 'rgba(34,211,238,0.15)');
+    this.circle(this.bx, this.by, this.br * 1.3, 'rgba(255,255,255,0.35)');
+    this.circle(this.bx, this.by, this.br, '#fff');
+
+    // HUD
+    this.text('♥ ' + this.lives, this.W * 0.04, this.H * 0.025, Math.max(11, this.H * 0.02), '#f87171', 'left');
+    this.text(this.score, this.W * 0.96, this.H * 0.025, Math.max(11, this.H * 0.02), '#22d3ee', 'right');
+  }
+
+  _darken(hex) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgb(${Math.floor(r * 0.6)}, ${Math.floor(g * 0.6)}, ${Math.floor(b * 0.6)})`;
+  }
+}
+
+/* ============================================================
+   5. SHOOTER
+   ============================================================ */
+class ShooterGame extends GameBase {
+  getAspectRatio() { return 9 / 16; }
+  getControls() { return 'drag-h'; }
+  reset() {
+    this.px = this.W / 2;
+    this.py = this.H - 40;
+    this.bullets = []; this.enemies = [];
+    this.timer = 1; this.fireTimer = 0;
+    this.score = 0;
+    this.setScore(0);
+  }
+  update(dt) {
+    this.fireTimer -= dt;
+    if (this.fireTimer <= 0) {
+      this.bullets.push({ x: this.px, y: this.py - 15, vy: -400 });
+      this.fireTimer = 0.18;
+      Audio.tap();
+    }
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.enemies.push({ x: NanoGames.rand(20, this.W - 20), y: -20, r: 12 });
+      this.timer = 0.6;
+    }
+    this.bullets.forEach(b => b.y += b.vy * dt);
+    this.bullets = this.bullets.filter(b => b.y > -10);
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const e = this.enemies[i];
+      e.y += 120 * dt;
+      if (e.y > this.H + 20) { this.enemies.splice(i, 1); continue; }
+      if (Math.abs(e.x - this.px) < 15 && Math.abs(e.y - this.py) < 15) {
+        Audio.hit();
+        return this.gameOver(this.score);
+      }
+      for (let j = this.bullets.length - 1; j >= 0; j--) {
+        const b = this.bullets[j];
+        if (Math.hypot(b.x - e.x, b.y - e.y) < e.r + 3) {
+          this.bullets.splice(j, 1);
+          this.enemies.splice(i, 1);
+          this.score++;
+          this.setScore(this.score);
+          Audio.score();
+          break;
+        }
+      }
+    }
+  }
+  onDrag(nx) { this.px = NanoGames.clamp(nx * this.W, 16, this.W - 16); }
+  render() {
+    this.bg();
+    this.enemies.forEach(e => this.circle(e.x, e.y, e.r, '#f87171'));
+    this.bullets.forEach(b => this.rect(b.x - 2, b.y, 4, 10, '#22d3ee'));
+    this.rrect(this.px - 14, this.py - 8, 28, 20, 4, '#22d3ee');
+    this.rrect(this.px - 4, this.py - 16, 8, 10, 2, '#22d3ee');
+    this.text(this.score, this.W / 2, 24, 20, '#fff');
+  }
+}
+
+/* ============================================================
+   6. TETRIS
+   ============================================================ */
+class TetrisGame extends GameBase {
+  constructor(c) {
+    super(c);
+    this.COLS = 10; this.ROWS = 16;
+    this.shapes = [
+      [[1,1,1,1]],
+      [[1,1],[1,1]],
+      [[0,1,0],[1,1,1]],
+      [[1,0,0],[1,1,1]],
+      [[0,0,1],[1,1,1]],
+      [[0,1,1],[1,1,0]],
+      [[1,1,0],[0,1,1]]
+    ];
+    this.colors = ['#22d3ee','#fbbf24','#a78bfa','#f87171','#34d399','#fb923c','#60a5fa'];
+  }
+  getAspectRatio() { return 10 / 16; }
+  getControls() { return 'dpad-ab'; }
+  reset() {
+    this.grid = Array.from({length: this.ROWS}, () => Array(this.COLS).fill(0));
+    this.score = 0;
+    this.setScore(0);
+    this.dropTimer = 0;
+    this.dropInterval = 0.6;
+    this._newPiece();
+  }
+  _newPiece() {
+    const i = NanoGames.rand(0, this.shapes.length - 1);
+    this.piece = { shape: this.shapes[i].map(r => r.slice()), color: this.colors[i], x: 3, y: 0 };
+    if (this._collide(0, 0, this.piece.shape)) { Audio.hit(); this.gameOver(this.score); }
+  }
+  _collide(dx, dy, shape) {
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        if (!shape[y][x]) continue;
+        const nx = this.piece.x + x + dx, ny = this.piece.y + y + dy;
+        if (nx < 0 || nx >= this.COLS || ny >= this.ROWS) return true;
+        if (ny >= 0 && this.grid[ny][nx]) return true;
+      }
+    }
+    return false;
+  }
+  _rotate() {
+    const s = this.piece.shape;
+    const r = s[0].map((_, i) => s.map(row => row[i]).reverse());
+    if (!this._collide(0, 0, r)) this.piece.shape = r;
+  }
+  _lock() {
+    for (let y = 0; y < this.piece.shape.length; y++) {
+      for (let x = 0; x < this.piece.shape[y].length; x++) {
+        if (this.piece.shape[y][x]) this.grid[this.piece.y + y][this.piece.x + x] = this.piece.color;
+      }
+    }
+    let lines = 0;
+    for (let y = this.ROWS - 1; y >= 0; y--) {
+      if (this.grid[y].every(c => c)) { this.grid.splice(y, 1); this.grid.unshift(Array(this.COLS).fill(0)); lines++; y++; }
+    }
+    if (lines > 0) {
+      this.score += lines;
+      this.setScore(this.score);
+      Audio.score();
+      this.dropInterval = Math.max(0.15, 0.6 - this.score * 0.01);
+    }
+    this._newPiece();
+  }
+  update(dt) {
+    if (this.over) return;
+    this.dropTimer += dt;
+    if (this.dropTimer > this.dropInterval) {
+      this.dropTimer = 0;
+      if (this._collide(0, 1, this.piece.shape)) this._lock();
+      else this.piece.y++;
+    }
+  }
+  onInput(a, st) {
+    if (st !== 'press' || this.over) return;
+    if (a === 'left' && !this._collide(-1, 0, this.piece.shape)) this.piece.x--;
+    else if (a === 'right' && !this._collide(1, 0, this.piece.shape)) this.piece.x++;
+    else if (a === 'down' && !this._collide(0, 1, this.piece.shape)) this.piece.y++;
+    else if (a === 'a') this._rotate();
+    else if (a === 'b') {
+      while (!this._collide(0, 1, this.piece.shape)) this.piece.y++;
+      this._lock();
+    }
+  }
+  render() {
+    this.bg();
+    const cs = Math.min(this.W / this.COLS, this.H / this.ROWS);
+    const ox = (this.W - cs * this.COLS) / 2;
+    const oy = (this.H - cs * this.ROWS) / 2;
+    for (let y = 0; y < this.ROWS; y++) {
+      for (let x = 0; x < this.COLS; x++) {
+        if (this.grid[y][x]) this.rrect(ox + x * cs + 1, oy + y * cs + 1, cs - 2, cs - 2, 2, this.grid[y][x]);
+      }
+    }
+    for (let y = 0; y < this.piece.shape.length; y++) {
+      for (let x = 0; x < this.piece.shape[y].length; x++) {
+        if (this.piece.shape[y][x]) {
+          this.rrect(ox + (this.piece.x + x) * cs + 1, oy + (this.piece.y + y) * cs + 1, cs - 2, cs - 2, 2, this.piece.color);
+        }
+      }
+    }
+    this.text(this.score, this.W / 2, 14, 14, '#22d3ee');
+  }
+}
+
+/* ============================================================
+   7. RACING
+   ============================================================ */
+class RacingGame extends GameBase {
+  getAspectRatio() { return 9 / 16; }
+  getControls() { return 'drag-h'; }
+  reset() {
+    this.px = this.W / 2;
+    this.py = this.H - 80;
+    this.cars = []; this.timer = 1;
+    this.score = 0; this.dist = 0;
+    this.setScore(0);
+  }
+  update(dt) {
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.cars.push({ x: NanoGames.rand(20, this.W - 20), y: -40 });
+      this.timer = Math.max(0.4, 0.9 - this.score * 0.01);
+    }
+    const speed = 200 + Math.min(200, this.score * 5);
+    this.cars.forEach(c => c.y += speed * dt);
+    this.cars = this.cars.filter(c => c.y < this.H + 40);
+    this.dist += dt * speed / 10;
+    this.score = Math.floor(this.dist);
+    this.setScore(this.score);
+    for (const c of this.cars) {
+      if (Math.abs(c.x - this.px) < 22 && Math.abs(c.y - this.py) < 30) {
+        Audio.hit();
+        return this.gameOver(this.score);
+      }
+    }
+  }
+  onDrag(nx) { this.px = NanoGames.clamp(nx * this.W, 20, this.W - 20); }
+  render() {
+    this.bg();
+    for (let i = 0; i < 6; i++) {
+      const y = ((i * 60) + (this.dist % 60)) % this.H - 60;
+      this.rect(this.W / 2 - 2, y, 4, 30, 'rgba(34,211,238,0.15)');
+    }
+    this.cars.forEach(c => this.rrect(c.x - 16, c.y - 24, 32, 48, 6, '#f87171'));
+    this.rrect(this.px - 16, this.py - 24, 32, 48, 6, '#22d3ee');
+    this.text(this.score + 'm', this.W - 12, 20, 14, '#22d3ee', 'right');
+  }
+}
+
+/* ============================================================
+   8. TANK BATTLE
+   ============================================================ */
+class TankGame extends GameBase {
+  getAspectRatio() { return 1; }
+  getControls() { return 'dpad-fire'; }
+  reset() {
+    this.px = this.W / 2;
+    this.py = this.H - 50;
+    this.bullets = []; this.enemies = []; this.timer = 1.2;
+    this.score = 0;
+    this.setScore(0);
+  }
+  update(dt) {
+    this.bullets.forEach(b => { b.x += b.vx * dt; b.y += b.vy * dt; });
+    this.bullets = this.bullets.filter(b => b.x > -10 && b.x < this.W + 10 && b.y > -10 && b.y < this.H + 10);
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.enemies.push({ x: NanoGames.rand(30, this.W - 30), y: 30, cd: 1.2 });
+      this.timer = Math.max(1, 2 - this.score * 0.02);
+    }
+    this.enemies.forEach(e => { e.cd -= dt; });
+    this.enemies.forEach(e => {
+      if (e.cd <= 0) {
+        e.cd = 1.5;
+        const dx = this.px - e.x, dy = this.py - e.y, d = Math.hypot(dx, dy) || 1;
+        this.bullets.push({ x: e.x, y: e.y, vx: dx / d * 180, vy: dy / d * 180, enemy: true });
+      }
+    });
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+      const b = this.bullets[i];
+      if (b.enemy) {
+        if (Math.hypot(b.x - this.px, b.y - this.py) < 16) {
+          Audio.hit();
+          return this.gameOver(this.score);
+        }
+      } else {
+        for (let j = this.enemies.length - 1; j >= 0; j--) {
+          const e = this.enemies[j];
+          if (Math.hypot(b.x - e.x, b.y - e.y) < 16) {
+            this.bullets.splice(i, 1);
+            this.enemies.splice(j, 1);
+            this.score++;
+            this.setScore(this.score);
+            Audio.score();
+            break;
+          }
+        }
+      }
+    }
+  }
+  onInput(a, st) {
+    if (st !== 'press') return;
+    const sp = 15;
+    if (a === 'up') this.py -= sp;
+    if (a === 'down') this.py += sp;
+    if (a === 'left') this.px -= sp;
+    if (a === 'right') this.px += sp;
+    this.px = NanoGames.clamp(this.px, 20, this.W - 20);
+    this.py = NanoGames.clamp(this.py, 20, this.H - 20);
+    if (a === 'fire') {
+      this.bullets.push({ x: this.px, y: this.py, vx: 0, vy: -350 });
+      Audio.tap();
+    }
+  }
+  render() {
+    this.bg();
+    this.bullets.forEach(b => this.circle(b.x, b.y, 3, b.enemy ? '#f87171' : '#22d3ee'));
+    this.enemies.forEach(e => this.rrect(e.x - 12, e.y - 12, 24, 24, 4, '#f87171'));
+    this.rrect(this.px - 14, this.py - 14, 28, 28, 4, '#22d3ee');
+    this.rect(this.px - 2, this.py - 20, 4, 8, '#22d3ee');
+    this.text(this.score, this.W / 2, 20, 16, '#fff');
+  }
+}
+
+/* ============================================================
+   9. CATCH BALL
+   ============================================================ */
+class CatchGame extends GameBase {
+  getAspectRatio() { return 4 / 3; }
+  getControls() { return 'drag-h'; }
+  reset() {
+    this.px = this.W / 2; this.bw = 60; this.py = this.H - 20;
+    this.balls = []; this.timer = 0.6;
+    this.score = 0; this.lives = 3;
+    this.setScore(0);
+  }
+  update(dt) {
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.balls.push({ x: NanoGames.rand(10, this.W - 10), y: -10 });
+      this.timer = Math.max(0.3, 0.8 - this.score * 0.01);
+    }
+    this.balls.forEach(b => b.y += 160 * dt);
+    this.balls = this.balls.filter(b => {
+      if (b.y > this.py - 10 && b.y < this.py + 10 && Math.abs(b.x - this.px) < this.bw / 2) {
+        this.score++;
+        this.setScore(this.score);
+        Audio.eat();
+        return false;
+      }
+      if (b.y > this.H) {
+        this.lives--; Audio.hit();
+        if (this.lives <= 0) { this.gameOver(this.score); return false; }
+        return false;
+      }
+      return true;
+    });
+  }
+  onDrag(nx) { this.px = NanoGames.clamp(nx * this.W, this.bw / 2, this.W - this.bw / 2); }
+  render() {
+    this.bg();
+    this.balls.forEach(b => this.circle(b.x, b.y, 8, '#fbbf24'));
+    this.rrect(this.px - this.bw / 2, this.py - 8, this.bw, 16, 6, '#22d3ee');
+    this.text('♥ ' + this.lives, 12, 16, 12, '#f87171', 'left');
+    this.text(this.score, this.W - 12, 16, 14, '#22d3ee', 'right');
+  }
+}
+
+/* ============================================================
+   10. PING PONG
+   ============================================================ */
+class PongGame extends GameBase {
+  getAspectRatio() { return 4 / 3; }
+  getControls() { return 'drag-y'; }
+  reset() {
+    this.ph = 50; this.pw = 8;
+    this.px = 12;
+    this.py = this.H / 2 - this.ph / 2;
+    this.ax = this.W - 20;
+    this.ay = this.H / 2 - this.ph / 2;
+    this.bx = this.W / 2; this.by = this.H / 2;
+    this.bdx = 220 * (Math.random() > 0.5 ? 1 : -1);
+    this.bdy = NanoGames.rand(-150, 150);
+    this.score = 0; this.aiScore = 0;
+    this._endScheduled = false;
+    this.setScore(0);
+  }
+  update(dt) {
+    this.bx += this.bdx * dt;
+    this.by += this.bdy * dt;
+    if (this.by < 6 || this.by > this.H - 6) this.bdy *= -1;
+    if (this.bx - 6 < this.px + this.pw && this.bx + 6 > this.px &&
+        this.by > this.py && this.by < this.py + this.ph && this.bdx < 0) {
+      this.bdx = Math.abs(this.bdx) * 1.05;
+      this.bdy += (this.by - (this.py + this.ph / 2)) * 3;
+      this.bdy = NanoGames.clamp(this.bdy, -300, 300);
+      Audio.tap();
+    }
+    const target = this.by - this.ph / 2;
+    this.ay += (target - this.ay) * Math.min(1, dt * 5);
+    this.ay = NanoGames.clamp(this.ay, 0, this.H - this.ph);
+    if (this.bx + 6 > this.ax && this.bx - 6 < this.ax + this.pw &&
+        this.by > this.ay && this.by < this.ay + this.ph && this.bdx > 0) {
+      this.bdx = -Math.abs(this.bdx);
+      this.bdy += (this.by - (this.ay + this.ph / 2)) * 3;
+    }
+    if (this.bx < 0) { this.aiScore++; this._resetBall(1); }
+    if (this.bx > this.W) { this.score++; this.setScore(this.score); Audio.score(); this._resetBall(-1); }
+    if (!this._endScheduled && (this.score >= 5 || this.aiScore >= 5)) {
+      this._endScheduled = true;
+      this.setTimeout(() => this.gameOver(this.score), 100);
+    }
+  }
+  _resetBall(dir) {
+    this.bx = this.W / 2; this.by = this.H / 2;
+    this.bdx = 220 * dir;
+    this.bdy = NanoGames.rand(-150, 150);
+  }
+  onDrag(nx, ny) { this.py = NanoGames.clamp(ny * this.H - this.ph / 2, 0, this.H - this.ph); }
+  render() {
+    this.bg();
+    this.rect(this.W / 2 - 1, 0, 2, this.H, 'rgba(255,255,255,0.15)');
+    this.rrect(this.px, this.py, this.pw, this.ph, 3, '#22d3ee');
+    this.rrect(this.ax, this.ay, this.pw, this.ph, 3, '#f87171');
+    this.circle(this.bx, this.by, 5, '#fff');
+    this.text(this.score + ' - ' + this.aiScore, this.W / 2, 20, 14, '#fff');
+  }
+}
+
+/* ============================================================
+   11. DOODLE JUMP
+   ============================================================ */
+class DoodleGame extends GameBase {
+  getAspectRatio() { return 9 / 16; }
+  getControls() { return 'drag-h'; }
+  reset() {
+    this.px = this.W / 2;
+    this.py = this.H - 100;
+    this.vy = 0;
+    this.platforms = [];
+    this.camY = 0;
+    for (let i = 0; i < 8; i++) {
+      const pw = 60;
+      this.platforms.push({ x: NanoGames.rand(10, Math.max(11, this.W - pw - 10)), y: this.H - i * 70 - 60, w: pw });
+    }
+    this.score = 0;
+    this.setScore(0);
+  }
+  update(dt) {
+    this.vy += 1400 * dt;
+    this.py += this.vy * dt;
+    if (this.py > this.H) { Audio.hit(); return this.gameOver(this.score); }
+    if (this.vy > 0) {
+      for (const p of this.platforms) {
+        if (this.px + 12 > p.x && this.px - 12 < p.x + p.w &&
+            this.py > p.y && this.py < p.y + 12) {
+          this.vy = -650;
+          Audio.jump();
+          break;
+        }
+      }
+    }
+    if (this.py < this.H * 0.4) {
+      const diff = this.H * 0.4 - this.py;
+      this.py = this.H * 0.4;
+      this.platforms.forEach(p => p.y += diff);
+      this.camY += diff;
+      const s = Math.floor(this.camY / 10);
+      if (s !== this.score) { this.score = s; this.setScore(s); }
+      while (this.platforms[0].y > this.H) {
+        this.platforms.shift();
+        const pw = 60;
+        const last = this.platforms[this.platforms.length - 1];
+        this.platforms.push({ x: NanoGames.rand(10, Math.max(11, this.W - pw - 10)), y: last.y - NanoGames.rand(60, 90), w: pw });
+      }
+    }
+  }
+  onDrag(nx) { this.px = NanoGames.clamp(nx * this.W, 12, this.W - 12); }
+  render() {
+    this.bg();
+    this.platforms.forEach(p => this.rrect(p.x, p.y, p.w, 10, 4, '#34d399'));
+    this.circle(this.px, this.py, 14, '#22d3ee');
+    this.circle(this.px - 4, this.py - 4, 2, '#0a0e1a');
+    this.circle(this.px + 4, this.py - 4, 2, '#0a0e1a');
+    this.text(this.score + 'm', this.W - 12, 20, 14, '#22d3ee', 'right');
+  }
+}
+
+/* ============================================================
+   12. BOMB DEFUSE
+   ============================================================ */
+class BombGame extends GameBase {
+  getAspectRatio() { return 4 / 3; }
+  getControls() { return 'none'; }
+  reset() {
+    this.score = 0;
+    this.setScore(0);
+    this._newRound();
+  }
+  _newRound() {
+    const colors = ['#f87171', '#60a5fa', '#34d399', '#fbbf24', '#a78bfa', '#fb923c'];
+    const n = NanoGames.rand(3, 5);
+    this.wires = [];
+    const shuffled = [...colors].sort(() => Math.random() - 0.5);
+    for (let i = 0; i < n; i++) this.wires.push(shuffled[i]);
+    this.correct = NanoGames.rand(0, n - 1);
+    this.time = 4;
+    this.wireY = this.H * 0.55;
+  }
+  update(dt) {
+    this.time -= dt;
+    if (this.time <= 0) { Audio.hit(); return this.gameOver(this.score); }
+  }
+  onTap(nx, ny) {
+    if (ny < 0.5 || ny > 0.75) return;
+    const idx = Math.floor(nx * this.wires.length);
+    if (idx < 0 || idx >= this.wires.length) return;
+    if (idx === this.correct) {
+      this.score++;
+      this.setScore(this.score);
+      Audio.score();
+      this._newRound();
+    } else {
+      Audio.hit();
+      this.gameOver(this.score);
+    }
+  }
+  render() {
+    this.bg();
+    this.text('BOMB', this.W / 2, 30, 24, '#f87171');
+    this.text(this.time.toFixed(1) + 's', this.W / 2, 60, 18, '#fbbf24');
+    const wireW = this.W / this.wires.length;
+    this.wires.forEach((c, i) => {
+      const x = i * wireW + wireW / 2;
+      this.rect(x - 4, this.wireY, 8, this.H * 0.15, c);
+      this.rect(x - 8, this.wireY - 8, 16, 8, '#666');
+    });
+    this.text('Tap the correct wire', this.W / 2, this.H - 20, 12, '#7a87a8');
+    this.text(this.score, this.W - 12, 20, 14, '#22d3ee', 'right');
+  }
+}
+
+/* ============================================================
+   13. WHACK A MOLE
+   ============================================================ */
+class WhackGame extends GameBase {
+  getAspectRatio() { return 1; }
+  getControls() { return 'none'; }
+  reset() {
+    this.score = 0;
+    this.setScore(0);
+    this.holes = Array.from({length: 9}, () => ({ mole: false, timer: 0 }));
+    this.spawnTimer = 0;
+    this.timeLeft = 30;
+  }
+  update(dt) {
+    this.timeLeft -= dt;
+    if (this.timeLeft <= 0) { Audio.hit(); return this.gameOver(this.score); }
+    this.spawnTimer -= dt;
+    if (this.spawnTimer <= 0) {
+      this.spawnTimer = Math.max(0.35, 0.9 - this.score * 0.02);
+      const idx = NanoGames.rand(0, 8);
+      if (!this.holes[idx].mole) { this.holes[idx].mole = true; this.holes[idx].timer = 1.2; }
+    }
+    this.holes.forEach(h => {
+      if (h.mole) {
+        h.timer -= dt;
+        if (h.timer <= 0) h.mole = false;
+      }
+    });
+  }
+  onTap(nx, ny) {
+    const cx = Math.floor(nx * 3);
+    const cy = Math.floor(ny * 3);
+    const idx = cy * 3 + cx;
+    if (idx < 0 || idx > 8) return;
+    if (this.holes[idx].mole) {
+      this.holes[idx].mole = false;
+      this.score++;
+      this.setScore(this.score);
+      Audio.eat();
+    }
+  }
+  render() {
+    this.bg();
+    const cw = this.W / 3, ch = this.H / 3;
+    for (let i = 0; i < 9; i++) {
+      const cx = (i % 3) * cw;
+      const cy = Math.floor(i / 3) * ch;
+      this.rrect(cx + 6, cy + 6, cw - 12, ch - 12, 8, '#1a2238');
+      if (this.holes[i].mole) {
+        this.circle(cx + cw / 2, cy + ch / 2, Math.min(cw, ch) * 0.3, '#fbbf24');
+        this.circle(cx + cw / 2 - 8, cy + ch / 2 - 6, 3, '#0a0e1a');
+        this.circle(cx + cw / 2 + 8, cy + ch / 2 - 6, 3, '#0a0e1a');
+      }
+    }
+    this.text(this.timeLeft.toFixed(0) + 's', this.W / 2, 12, 12, '#f87171');
+    this.text(this.score, this.W - 12, 12, 14, '#22d3ee', 'right');
+  }
+}
+
+/* ============================================================
+   14. SIMON SAYS
+   ============================================================ */
+class SimonGame extends GameBase {
+  getAspectRatio() { return 1; }
+  getControls() { return 'none'; }
+  reset() {
+    this.score = 0;
+    this.setScore(0);
+    this.colors = ['#f87171', '#34d399', '#60a5fa', '#fbbf24'];
+    this.seq = []; this.userIdx = 0;
+    this.state = 'idle'; this.highlight = -1; this.timer = 0;
+    this._nextLevel();
+  }
+  _nextLevel() {
+    this.seq.push(NanoGames.rand(0, 3));
+    this.userIdx = 0;
+    this.state = 'show';
+    this.showIdx = 0;
+    this.timer = 0.5;
+  }
+  update(dt) {
+    if (this.state === 'show') {
+      this.timer -= dt;
+      if (this.timer <= 0) {
+        this.highlight = -1;
+        if (this.showIdx >= this.seq.length) {
+          this.state = 'input';
+          this.userIdx = 0;
+        } else {
+          this.highlight = this.seq[this.showIdx++];
+          this.timer = 0.5;
+          Audio.tap();
+        }
+      }
+    }
+  }
+  onTap(nx, ny) {
+    if (this.state !== 'input') return;
+    let idx;
+    if (nx < 0.5 && ny < 0.5) idx = 0;
+    else if (nx >= 0.5 && ny < 0.5) idx = 1;
+    else if (nx < 0.5) idx = 2;
+    else idx = 3;
+    this.highlight = idx;
+    Audio.tap();
+    this.setTimeout(() => { this.highlight = -1; }, 200);
+    if (idx !== this.seq[this.userIdx]) {
+      Audio.hit();
+      return this.gameOver(this.score);
+    }
+    this.userIdx++;
+    if (this.userIdx >= this.seq.length) {
+      this.score++;
+      this.setScore(this.score);
+      Audio.score();
+      this.state = 'wait';
+      this.setTimeout(() => { this._nextLevel(); }, 500);
+    }
+  }
+  render() {
+    this.bg();
+    const cx = this.W / 2, cy = this.H / 2;
+    const r = Math.min(this.W, this.H) * 0.4;
+    const quads = [
+      [cx-r, cy-r, r, r], [cx, cy-r, r, r],
+      [cx-r, cy, r, r], [cx, cy, r, r]
+    ];
+    quads.forEach((q, i) => {
+      this.ctx.globalAlpha = this.highlight === i ? 1 : 0.5;
+      this.ctx.fillStyle = this.highlight === i ? '#fff' : this.colors[i];
+      this.ctx.fillRect(q[0], q[1], q[2], q[3]);
+    });
+    this.ctx.globalAlpha = 1;
+    this.text(this.score, this.W / 2, 20, 16, '#fff');
+    if (this.state === 'show') this.text('Watch...', this.W / 2, this.H - 20, 12, '#7a87a8');
+    if (this.state === 'input') this.text('Your turn!', this.W / 2, this.H - 20, 12, '#22d3ee');
+  }
+}
+
+/* ============================================================
+   15. MEMORY CARD
+   ============================================================ */
+class MemoryGame extends GameBase {
+  getAspectRatio() { return 1; }
+  getControls() { return 'none'; }
+  reset() {
+    const emojis = ['🍎','🍌','🍇','🍓','🍒','🍊','🍋','🍑'];
+    const pairs = [...emojis, ...emojis].sort(() => Math.random() - 0.5);
+    this.cards = pairs.map(e => ({ emoji: e, flipped: false, matched: false }));
+    this.flipped = [];
+    this.moves = 0;
+    this.locked = false;
+    this.setScore(0);
+  }
+  onTap(nx, ny) {
+    if (this.locked) return;
+    const col = Math.floor(nx * 4);
+    const row = Math.floor(ny * 4);
+    if (col < 0 || col > 3 || row < 0 || row > 3) return;
+    const idx = row * 4 + col;
+    const c = this.cards[idx];
+    if (c.flipped || c.matched) return;
+    c.flipped = true;
+    this.flipped.push(idx);
+    Audio.tap();
+    if (this.flipped.length === 2) {
+      this.moves++;
+      this.setScore(this.moves);
+      this.locked = true;
+      this.setTimeout(() => {
+        const [a, b] = this.flipped;
+        if (this.cards[a].emoji === this.cards[b].emoji) {
+          this.cards[a].matched = true;
+          this.cards[b].matched = true;
+          Audio.score();
+        } else {
+          this.cards[a].flipped = false;
+          this.cards[b].flipped = false;
+          Audio.hit();
+        }
+        this.flipped = [];
+        this.locked = false;
+        if (this.cards.every(cc => cc.matched)) this.gameOver(this.moves);
+      }, 700);
+    }
+  }
+  render() {
+    this.bg();
+    const cs = Math.min(this.W, this.H) / 4;
+    const ox = (this.W - cs * 4) / 2;
+    const oy = (this.H - cs * 4) / 2;
+    this.cards.forEach((c, i) => {
+      const x = ox + (i % 4) * cs + 3;
+      const y = oy + Math.floor(i / 4) * cs + 3;
+      let color = '#1a2238';
+      if (c.matched) color = '#34d39944';
+      else if (c.flipped) color = '#22d3ee';
+      this.rrect(x, y, cs - 6, cs - 6, 6, color);
+      this.text(c.flipped || c.matched ? c.emoji : '?', x + (cs - 6) / 2, y + (cs - 6) / 2, cs * 0.45, '#fff');
+    });
+    this.text('Moves: ' + this.moves, this.W - 12, 14, 12, '#22d3ee', 'right');
+  }
+}
+
+/* ============================================================
+   16. ASTEROID
+   ============================================================ */
+class AsteroidGame extends GameBase {
+  getAspectRatio() { return 1; }
+  getControls() { return 'dpad-fire'; }
+  reset() {
+    this.px = this.W / 2;
+    this.py = this.H / 2;
+    this.bullets = []; this.rocks = [];
+    this.timer = 1;
+    this.score = 0;
+    this.setScore(0);
+  }
+  update(dt) {
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.timer = Math.max(0.4, 1 - this.score * 0.02);
+      const side = NanoGames.rand(0, 3);
+      let x, y;
+      if (side === 0) { x = NanoGames.rand(0, this.W); y = -20; }
+      else if (side === 1) { x = this.W + 20; y = NanoGames.rand(0, this.H); }
+      else if (side === 2) { x = NanoGames.rand(0, this.W); y = this.H + 20; }
+      else { x = -20; y = NanoGames.rand(0, this.H); }
+      const dx = this.px - x, dy = this.py - y, d = Math.hypot(dx, dy) || 1;
+      this.rocks.push({ x, y, vx: dx / d * 80, vy: dy / d * 80, r: 14 });
+    }
+    this.bullets.forEach(b => { b.x += b.vx * dt; b.y += b.vy * dt; });
+    this.bullets = this.bullets.filter(b => b.x > -10 && b.x < this.W + 10 && b.y > -10 && b.y < this.H + 10);
+    this.rocks.forEach(r => { r.x += r.vx * dt; r.y += r.vy * dt; });
+    for (let i = this.rocks.length - 1; i >= 0; i--) {
+      const r = this.rocks[i];
+      if (Math.hypot(r.x - this.px, r.y - this.py) < r.r + 10) {
+        Audio.hit();
+        return this.gameOver(this.score);
+      }
+      for (let j = this.bullets.length - 1; j >= 0; j--) {
+        const b = this.bullets[j];
+        if (Math.hypot(b.x - r.x, b.y - r.y) < r.r) {
+          this.bullets.splice(j, 1);
+          this.rocks.splice(i, 1);
+          this.score++;
+          this.setScore(this.score);
+          Audio.score();
+          break;
+        }
+      }
+    }
+    this.rocks = this.rocks.filter(r => r.x > -50 && r.x < this.W + 50 && r.y > -50 && r.y < this.H + 50);
+  }
+  onInput(a, st) {
+    if (st !== 'press') return;
+    const sp = 20;
+    if (a === 'up') this.py -= sp;
+    if (a === 'down') this.py += sp;
+    if (a === 'left') this.px -= sp;
+    if (a === 'right') this.px += sp;
+    this.px = NanoGames.clamp(this.px, 10, this.W - 10);
+    this.py = NanoGames.clamp(this.py, 10, this.H - 10);
+    if (a === 'fire' && this.rocks.length > 0) {
+      let nearest = this.rocks[0];
+      let nearestDist = Math.hypot(nearest.x - this.px, nearest.y - this.py);
+      for (const r of this.rocks) {
+        const d = Math.hypot(r.x - this.px, r.y - this.py);
+        if (d < nearestDist) { nearest = r; nearestDist = d; }
+      }
+      const dx = nearest.x - this.px, dy = nearest.y - this.py, d = nearestDist || 1;
+      this.bullets.push({ x: this.px, y: this.py, vx: dx / d * 400, vy: dy / d * 400 });
+      Audio.tap();
+    }
+  }
+  render() {
+    this.bg();
+    this.rocks.forEach(r => this.circle(r.x, r.y, r.r, '#94a3b8'));
+    this.bullets.forEach(b => this.circle(b.x, b.y, 3, '#22d3ee'));
+    this.circle(this.px, this.py, 10, '#22d3ee');
+    this.text(this.score, this.W - 12, 14, 14, '#fff', 'right');
+  }
+}
+
+/* ============================================================
+   17. FROGGER
+   ============================================================ */
+class FroggerGame extends GameBase {
+  constructor(c) { super(c); this.COLS = 9; }
+  getAspectRatio() { return 9 / 16; }
+  getControls() { return 'dpad'; }
+  reset() {
+    this.row = this.COLS - 1;
+    this.col = Math.floor(this.COLS / 2);
+    this.lanes = [];
+    for (let i = 0; i < this.COLS - 1; i++) {
+      this.lanes.push({
+        cars: [],
+        speed: NanoGames.rand(-120, 120) || 100,
+        timer: Math.random()
+      });
+    }
+    this.score = 0;
+    this.setScore(0);
+    this._calc();
+  }
+  _calc() {
+    this._cs = Math.min(this.W / this.COLS, this.H / this.COLS);
+    this._ox = (this.W - this._cs * this.COLS) / 2;
+    this._oy = (this.H - this._cs * this.COLS) / 2;
+  }
+  onResize() { if (this.lanes) this._calc(); }
+  update(dt) {
+    this.lanes.forEach((lane, i) => {
+      lane.timer -= dt;
+      if (lane.timer <= 0) {
+        lane.timer = Math.max(0.6, 1.5 - this.score * 0.05);
+        lane.cars.push({ x: lane.speed > 0 ? -50 : this.W + 50 });
+      }
+      lane.cars.forEach(c => c.x += lane.speed * dt);
+      lane.cars = lane.cars.filter(c => c.x > -80 && c.x < this.W + 80);
+      const px = this._ox + this.col * this._cs + this._cs / 2;
+      const py = this._oy + this.row * this._cs + this._cs / 2;
+      const laneY = this._oy + i * this._cs + this._cs / 2;
+      for (const c of lane.cars) {
+        if (Math.abs(c.x - px) < 25 && Math.abs(laneY - py) < 12) {
+          Audio.hit();
+          return this.gameOver(this.score);
+        }
+      }
+    });
+  }
+  onInput(a, st) {
+    if (st !== 'press') return;
+    if (a === 'up') this.row--;
+    if (a === 'down') this.row++;
+    if (a === 'left') this.col--;
+    if (a === 'right') this.col++;
+    this.col = NanoGames.clamp(this.col, 0, this.COLS - 1);
+    this.row = NanoGames.clamp(this.row, 0, this.COLS - 1);
+    Audio.tap();
+    if (this.row === 0) {
+      this.score++;
+      this.setScore(this.score);
+      Audio.score();
+      this.row = this.COLS - 1;
+      this.col = Math.floor(this.COLS / 2);
+    }
+  }
+  render() {
+    this.bg();
+    const cs = this._cs, ox = this._ox, oy = this._oy;
+    for (let r = 0; r < this.COLS; r++) {
+      this.rect(ox, oy + r * cs, cs * this.COLS, cs - 1, r === 0 ? 'rgba(52,211,153,0.3)' : '#1a2238');
+    }
+    this.lanes.forEach((lane, i) => {
+      const y = oy + i * cs + cs / 2;
+      lane.cars.forEach(c => this.rrect(c.x - 25, y - 10, 50, 20, 4, '#f87171'));
+    });
+    this.circle(ox + this.col * cs + cs / 2, oy + this.row * cs + cs / 2, cs * 0.35, '#22d3ee');
+    this.text(this.score, this.W - 12, 14, 14, '#fff', 'right');
+  }
+}
+
+/* ============================================================
+   18. DODGE BALL
+   ============================================================ */
+class DodgeGame extends GameBase {
+  getAspectRatio() { return 1; }
+  getControls() { return 'dpad'; }
+  reset() {
+    this.px = this.W / 2;
+    this.py = this.H / 2;
+    this.balls = [];
+    this.timer = 0.6;
+    this.score = 0;
+    this.time = 0;
+    this.setScore(0);
+  }
+  update(dt) {
+    this.time += dt;
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.timer = Math.max(0.2, 0.6 - this.time * 0.005);
+      const edge = NanoGames.rand(0, 3);
+      let x, y;
+      if (edge === 0) { x = NanoGames.rand(0, this.W); y = -10; }
+      else if (edge === 1) { x = this.W + 10; y = NanoGames.rand(0, this.H); }
+      else if (edge === 2) { x = NanoGames.rand(0, this.W); y = this.H + 10; }
+      else { x = -10; y = NanoGames.rand(0, this.H); }
+      const dx = this.px - x, dy = this.py - y, d = Math.hypot(dx, dy) || 1;
+      const sp = 100 + this.time * 5;
+      this.balls.push({ x, y, vx: dx / d * sp, vy: dy / d * sp });
+    }
+    this.balls.forEach(b => { b.x += b.vx * dt; b.y += b.vy * dt; });
+    for (const b of this.balls) {
+      if (Math.hypot(b.x - this.px, b.y - this.py) < 18) {
+        Audio.hit();
+        return this.gameOver(this.score);
+      }
+    }
+    this.balls = this.balls.filter(b => b.x > -30 && b.x < this.W + 30 && b.y > -30 && b.y < this.H + 30);
+    const s = Math.floor(this.time);
+    if (s !== this.score) { this.score = s; this.setScore(s); }
+  }
+  onInput(a, st) {
+    if (st !== 'press') return;
+    const sp = 18;
+    if (a === 'up') this.py -= sp;
+    if (a === 'down') this.py += sp;
+    if (a === 'left') this.px -= sp;
+    if (a === 'right') this.px += sp;
+    this.px = NanoGames.clamp(this.px, 15, this.W - 15);
+    this.py = NanoGames.clamp(this.py, 15, this.H - 15);
+  }
+  render() {
+    this.bg();
+    this.balls.forEach(b => this.circle(b.x, b.y, 8, '#f87171'));
+    this.circle(this.px, this.py, 12, '#22d3ee');
+    this.text(this.score + 's', this.W - 12, 14, 14, '#fff', 'right');
+  }
+}
+
+/* ============================================================
+   19. FRUIT NINJA
+   ============================================================ */
+class FruitGame extends GameBase {
+  getAspectRatio() { return 9 / 16; }
+  getControls() { return 'drag-free'; }
+  reset() {
+    this.fruits = [];
+    this.slices = [];
+    this.timer = 1;
+    this.score = 0;
+    this.setScore(0);
+    this.trail = [];
+  }
+  update(dt) {
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.timer = Math.max(0.4, 1 - this.score * 0.01);
+      this.fruits.push({
+        x: NanoGames.rand(40, Math.max(41, this.W - 40)),
+        y: this.H + 20,
+        vx: NanoGames.rand(-40, 40),
+        vy: -500 - Math.random() * 100,
+        emoji: ['🍎','🍌','🍇','🍓','🍒','🍊'][NanoGames.rand(0, 5)]
+      });
+    }
+    this.fruits.forEach(f => { f.vy += 900 * dt; f.x += f.vx * dt; f.y += f.vy * dt; });
+    this.fruits = this.fruits.filter(f => f.y < this.H + 40);
+    this.slices.forEach(s => s.life -= dt);
+    this.slices = this.slices.filter(s => s.life > 0);
+    this.trail.forEach(t => t.life -= dt);
+    this.trail = this.trail.filter(t => t.life > 0);
+  }
+  onDrag(nx, ny, phase) {
+    if (phase === 'end') return;
+    const x = nx * this.W, y = ny * this.H;
+    this.trail.push({ x, y, life: 0.3 });
+    for (let i = this.fruits.length - 1; i >= 0; i--) {
+      const f = this.fruits[i];
+      if (Math.hypot(f.x - x, f.y - y) < 45) {
+        this.fruits.splice(i, 1);
+        this.slices.push({ x: f.x, y: f.y, life: 0.3 });
+        this.score++;
+        this.setScore(this.score);
+        Audio.score();
+      }
+    }
+  }
+  render() {
+    this.bg();
+    this.fruits.forEach(f => {
+      this.ctx.font = '30px system-ui';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText(f.emoji, f.x, f.y);
+    });
+    this.trail.forEach(t => {
+      this.ctx.globalAlpha = t.life / 0.3;
+      this.circle(t.x, t.y, 6, '#22d3ee');
+      this.ctx.globalAlpha = 1;
+    });
+    this.slices.forEach(s => {
+      this.ctx.globalAlpha = s.life / 0.3;
+      this.circle(s.x, s.y, 20, '#22d3ee');
+      this.ctx.globalAlpha = 1;
+    });
+    this.text(this.score, this.W - 12, 14, 14, '#fff', 'right');
+  }
+}
+
+/* ============================================================
+   20. TREASURE HUNTER
+   ============================================================ */
+class TreasureGame extends GameBase {
+  constructor(c) { super(c); this.GRID = 10; }
+  getAspectRatio() { return 1; }
+  getControls() { return 'dpad'; }
+  reset() {
+    this.px = 0; this.py = 0;
+    this.treasures = [];
+    this.score = 0;
+    this.setScore(0);
+    this._spawnTreasure();
+    this._calc();
+  }
+  _calc() {
+    const s = Math.min(this.W, this.H);
+    this.cs = s / this.GRID;
+    this.ox = (this.W - s) / 2;
+    this.oy = (this.H - s) / 2;
+  }
+  onResize() { if (this.treasures) this._calc(); }
+  _spawnTreasure() {
+    for (let i = 0; i < 100; i++) {
+      const x = NanoGames.rand(0, this.GRID - 1);
+      const y = NanoGames.rand(0, this.GRID - 1);
+      if (x === this.px && y === this.py) continue;
+      if (this.treasures.some(t => t.x === x && t.y === y)) continue;
+      this.treasures.push({ x, y });
+      return;
+    }
+  }
+  onInput(a, st) {
+    if (st !== 'press') return;
+    if (a === 'up') this.py--;
+    if (a === 'down') this.py++;
+    if (a === 'left') this.px--;
+    if (a === 'right') this.px++;
+    this.px = NanoGames.clamp(this.px, 0, this.GRID - 1);
+    this.py = NanoGames.clamp(this.py, 0, this.GRID - 1);
+    Audio.tap();
+    const idx = this.treasures.findIndex(t => t.x === this.px && t.y === this.py);
+    if (idx >= 0) {
+      this.treasures.splice(idx, 1);
+      this.score++;
+      this.setScore(this.score);
+      Audio.eat();
+      this._spawnTreasure();
+    }
+  }
+  render() {
+    this.bg();
+    const { cs, ox, oy, GRID } = this;
+    this.rect(ox, oy, cs * GRID, cs * GRID, '#0b0f1c');
+    for (let i = 1; i < GRID; i++) {
+      this.rect(ox + i * cs, oy, 1, cs * GRID, 'rgba(255,255,255,0.05)');
+      this.rect(ox, oy + i * cs, cs * GRID, 1, 'rgba(255,255,255,0.05)');
+    }
+    this.treasures.forEach(t => {
+      this.text('💎', ox + t.x * cs + cs / 2, oy + t.y * cs + cs / 2, cs * 0.7, '#fbbf24');
+    });
+    this.circle(ox + this.px * cs + cs / 2, oy + this.py * cs + cs / 2, cs * 0.35, '#22d3ee');
+    this.text(this.score, this.W - 12, 14, 14, '#fff', 'right');
+  }
+}
+
+/* ============================================================
+   REGISTRY
+   ============================================================ */
+const REG = [
+  { id:'dino',     name:'Dino Run',      desc:'Lompati kaktus',        icon:'🦖', ach:[5,15,30],   factory: c => new DinoGame(c) },
+  { id:'flappy',   name:'Flappy Bird',   desc:'Terbang lewati pipa',   icon:'🐦', ach:[3,10,20],   factory: c => new FlappyGame(c) },
+  { id:'snake',    name:'Snake',         desc:'Makan apel',            icon:'🐍', ach:[5,15,25],   factory: c => new SnakeGame(c) },
+  { id:'breakout', name:'Breakout',      desc:'Hancurkan bata',        icon:'🧱', ach:[8,16,24],   factory: c => new BreakoutGame(c) },
+  { id:'shooter',  name:'Shooter',       desc:'Tembak musuh',          icon:'🚀', ach:[5,15,30],   factory: c => new ShooterGame(c) },
+  { id:'tetris',   name:'Tetris',        desc:'Susun blok',            icon:'🧩', ach:[10,25,50],  factory: c => new TetrisGame(c) },
+  { id:'racing',   name:'Racing',        desc:'Hindari mobil',         icon:'🏎️', ach:[10,25,50], factory: c => new RacingGame(c) },
+  { id:'tank',     name:'Tank Battle',   desc:'Hancurkan tank',        icon:'🎯', ach:[5,15,30],   factory: c => new TankGame(c) },
+  { id:'catch',    name:'Catch Ball',    desc:'Tangkap bola',          icon:'🏀', ach:[10,25,50],  factory: c => new CatchGame(c) },
+  { id:'pingpong', name:'Ping Pong',     desc:'Pantulkan bola',        icon:'🏓', ach:[3,7,10],    factory: c => new PongGame(c) },
+  { id:'doodle',   name:'Doodle Jump',   desc:'Lompat ke atas',        icon:'🦘', ach:[20,50,100], factory: c => new DoodleGame(c) },
+  { id:'bomb',     name:'Bomb Defuse',   desc:'Potong kabel',          icon:'💣', ach:[5,10,20],   factory: c => new BombGame(c) },
+  { id:'whack',    name:'Whack A Mole',  desc:'Pukul tikus',           icon:'🔨', ach:[20,40,60],  factory: c => new WhackGame(c) },
+  { id:'simon',    name:'Simon Says',    desc:'Ingat urutan',          icon:'🎨', ach:[5,15,30],   factory: c => new SimonGame(c) },
+  { id:'memory',   name:'Memory Card',   desc:'Cocokkan kartu',        icon:'🃏', ach:[20,15,10], inverse:true, factory: c => new MemoryGame(c) },
+  { id:'asteroid', name:'Asteroid',      desc:'Hancurkan asteroid',    icon:'☄️', ach:[30,60,100], factory: c => new AsteroidGame(c) },
+  { id:'frogger',  name:'Frogger',       desc:'Seberangi jalan',       icon:'🐸', ach:[3,6,10],    factory: c => new FroggerGame(c) },
+  { id:'dodge',    name:'Dodge Ball',    desc:'Hindari bola',          icon:'🎳', ach:[15,30,50],  factory: c => new DodgeGame(c) },
+  { id:'fruit',    name:'Fruit Ninja',   desc:'Tebas buah',            icon:'🍉', ach:[20,40,70],  factory: c => new FruitGame(c) },
+  { id:'treasure', name:'Treasure Hunter', desc:'Cari harta',          icon:'💎', ach:[10,20,35],  factory: c => new TreasureGame(c) }
+];
+REG.forEach(g => NanoGames.registerGame(g));
+
+/* ============================================================
+   UI
+   ============================================================ */
+const UI = (() => {
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+    const el = document.getElementById('screen-' + name);
+    if (el) el.classList.add('active');
+  }
+  function renderMenu() {
+    const grid = document.getElementById('game-grid');
+    grid.innerHTML = '';
+    NanoGames.games.forEach(game => {
+      const card = document.createElement('button');
+      card.className = 'game-card';
+      card.innerHTML = `<div class="game-icon">${game.icon}</div><div class="game-name">${game.name}</div><div class="game-desc">${game.desc}</div>`;
+      card.addEventListener('click', () => Router.openGame(game));
+      grid.appendChild(card);
+    });
+    const tg = NanoGames.games.length;
+    const ta = NanoGames.games.reduce((s, g) => s + Storage.getAchievementLevel(g.id), 0);
+    document.getElementById('menu-stats').textContent = `${tg} games · ${ta}/${tg * 3} achievements`;
+  }
+  function renderAchievements() {
+    const list = document.getElementById('achievements-list');
+    list.innerHTML = '';
+    NanoGames.games.forEach(game => {
+      const level = Storage.getAchievementLevel(game.id);
+      const best = Storage.getHighscore(game.id);
+      const th = game.ach;
+      const inv = game.inverse;
+      let nextT = level < th.length ? th[level] : null;
+      let pct = 100, lbl = 'Maxed out';
+      if (nextT !== null) {
+        let raw;
+        if (inv) {
+          const prev = level === 0 ? 999 : th[level - 1];
+          raw = best === 0 ? 0 : NanoGames.clamp((prev - best) / (prev - nextT), 0, 1);
+        } else raw = NanoGames.clamp(best / nextT, 0, 1);
+        pct = Math.round(raw * 100);
+        lbl = `Best ${best} / ${nextT}`;
+      }
+      const pips = th.map((_, i) => {
+        const on = i < level;
+        const cls = on ? (level === th.length ? 'pip gold' : 'pip on') : 'pip';
+        return `<div class="${cls}"></div>`;
+      }).join('');
+      const lvl = level === th.length ? `<span class="ach-level gold">MAX</span>` : `<span class="ach-level">Lv ${level}/${th.length}</span>`;
+      const card = document.createElement('div');
+      card.className = 'ach-card';
+      card.innerHTML = `
+        <div class="ach-header"><div class="ach-name"><span>${game.icon}</span>${game.name}</div>${lvl}</div>
+        <div class="ach-pips">${pips}</div>
+        <div class="ach-progress"><div class="ach-progress-fill" style="width:${pct}%"></div></div>
+        <div class="ach-progress-label"><span>${lbl}</span><span>${pct}%</span></div>
+      `;
+      list.appendChild(card);
+    });
+  }
+  function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
+  function showModal({ title, body, actions }) {
+    const root = document.getElementById('modal-root');
+    const bd = document.createElement('div');
+    bd.className = 'modal-backdrop';
+    const m = document.createElement('div');
+    m.className = 'modal';
+    m.innerHTML = `<div class="modal-title">${title}</div><div class="modal-body">${body}</div><div class="modal-actions"></div>`;
+    const ae = m.querySelector('.modal-actions');
+    actions.forEach(a => {
+      let btn;
+      if (a.href) {
+        btn = document.createElement('a');
+        btn.href = a.href;
+        btn.target = '_blank';
+        btn.rel = 'noopener';
+      } else {
+        btn = document.createElement('button');
+      }
+      btn.className = 'modal-btn' + (a.primary ? ' primary' : '');
+      btn.textContent = a.label;
+      if (a.onClick) btn.addEventListener('click', () => { Audio.click(); a.onClick(); });
+      else btn.addEventListener('click', () => Audio.click());
+      ae.appendChild(btn);
+    });
+    bd.appendChild(m);
+    root.innerHTML = '';
+    root.appendChild(bd);
+    bd.addEventListener('click', e => { if (e.target === bd) closeModal(); });
+  }
+    function showPauseMenu() {
+    const score = Router.getCurrentScore();
+    const actions = [
+      { label: '▶ Resume', primary: true, onClick: () => Router.resumeGame() }
+    ];
+
+    if (score > 0) {
+      actions.push({
+        label: `💾 Save & Quit (${score})`,
+        onClick: () => Router.saveAndQuit()
+      });
+    }
+
+    actions.push({ label: '🔄 Restart', onClick: () => Router.restartGame() });
+    actions.push({ label: '🚪 Back to Menu', onClick: () => Router.closeGame() });
+
+    showModal({
+      title: '⏸ Paused',
+      body: score > 0
+        ? `Skor saat ini: <strong style="color:var(--accent)">${score}</strong><br><span style="font-size:.75rem">Pilih Save & Quit untuk menyimpan skor.</span>`
+        : 'Game sedang dijeda.',
+      actions
+    });
+  }
+  function showGameOver(gameDef, score, best, isNewBest) {
+    const nb = isNewBest ? `<div class="new-best">🏆 New Best!</div>` : '';
+    const sl = gameDef.inverse ? 'Moves' : 'Score';
+    showModal({
+      title: 'Game Over',
+      body: `${sl}<span class="big">${score}</span>Best: ${best}${nb}`,
+      actions: [
+        { label: 'Play Again', primary: true, onClick: () => Router.restartGame() },
+        { label: 'Back to Menu', onClick: () => Router.closeGame() }
+      ]
+    });
+  }
+  function showCredits() {
+    const root = document.getElementById('modal-root');
+    const bd = document.createElement('div');
+    bd.className = 'modal-backdrop';
+    const m = document.createElement('div');
+    m.className = 'modal';
+    m.innerHTML = `
+      <div class="modal-title">ℹ️ About</div>
+      <div class="modal-body">
+        <div class="credits-content">
+          <div class="credits-avatar" id="credits-avatar-wrap">
+            <img src="avatar.png" alt="@eiai_nano7" id="credits-avatar-img">
+            <span class="fallback">N</span>
+          </div>
+          <div class="credits-name">@eiai_nano7</div>
+          <div class="credits-tag">Creator</div>
+          <div class="credits-desc">
+            Nano Games — mini arcade collection dengan 20 game klasik.<br>
+            Dibuat dengan ❤ untuk komunitas retro gaming.
+          </div>
+          <div class="credits-stats">
+            <div class="credits-stat">
+              <span class="credits-stat-num">20</span>
+              <span class="credits-stat-lbl">Games</span>
+            </div>
+            <div class="credits-stat">
+              <span class="credits-stat-num">60</span>
+              <span class="credits-stat-lbl">Achievements</span>
+            </div>
+            <div class="credits-stat">
+              <span class="credits-stat-num">v3.1</span>
+              <span class="credits-stat-lbl">Version</span>
+            </div>
+          </div>
+          <a class="credits-link" href="https://www.tiktok.com/@eiai_nano7" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+            Follow on TikTok
+          </a>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn primary" id="credits-close">Close</button>
+      </div>
+    `;
+    bd.appendChild(m);
+    root.innerHTML = '';
+    root.appendChild(bd);
+
+    const img = document.getElementById('credits-avatar-img');
+    const wrap = document.getElementById('credits-avatar-wrap');
+    const onFail = () => wrap.classList.add('failed');
+    img.addEventListener('error', onFail);
+    if (img.complete && img.naturalWidth === 0) onFail();
+
+    document.getElementById('credits-close').addEventListener('click', closeModal);
+    bd.addEventListener('click', e => { if (e.target === bd) closeModal(); });
+  }
+  function showAchievement(gameDef, level, threshold) {
+    const tiers = ['', 'Bronze', 'Silver', 'Gold'];
+    const tier = tiers[level] || 'Unlocked';
+    const toast = document.createElement('div');
+    toast.className = 'achievement-toast';
+    toast.innerHTML = `<div class="ach-tier">🏆 ${tier}</div><div class="ach-toast-name">${gameDef.icon} ${gameDef.name}</div><div class="ach-req">Reached ${threshold}</div>`;
+    document.body.appendChild(toast);
+    Audio.success();
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 400);
+    }, 3000);
+  }
+  function toast(msg) {
+    const el = document.createElement('div');
+    el.className = 'simple-toast';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => el.remove(), 300);
+    }, 1800);
+  }
+  return { showScreen, renderMenu, renderAchievements, closeModal, showModal, showPauseMenu, showGameOver, showCredits, showAchievement, toast };
+})();
+
+/* ============================================================
+   ROUTER — dengan cleanup penuh
+   ============================================================ */
+const Router = (() => {
+  let cur = null, def = null;
+  let _keyboardCleanup = null;
+  let _canvasCleanups = [];
+  let _currentScore = 0;
+
+  function cleanupAll() {
+    if (_keyboardCleanup) { _keyboardCleanup(); _keyboardCleanup = null; }
+    _canvasCleanups.forEach(fn => { try { fn(); } catch(e) {} });
+    _canvasCleanups = [];
+  }
+
+  function openGame(game) {
+    cleanupAll();
+    UI.closeModal();
+
+    _currentScore = 0; // reset skor
+
+    Audio.unlock();
+    Audio.click();
+    UI.showScreen('game');
+    def = game;
+
+    const canvas = document.getElementById('game-canvas');
+    const g = game.factory(canvas);
+    cur = g;
+
+    const best = Storage.getHighscore(game.id);
+    document.getElementById('hud-score').textContent = '0';
+    document.getElementById('hud-best').textContent = best;
+
+    g.onScoreChange = s => {
+      if (g.destroyed || cur !== g) return;
+      _currentScore = s;
+      document.getElementById('hud-score').textContent = s;
+      document.getElementById('hud-best').textContent = Math.max(Storage.getHighscore(game.id), s);
+      checkAch(game, s);
+    };
+
+    g.onGameOver = s => {
+      if (g.destroyed || cur !== g) return;
+      const nb = Storage.setHighscore(game.id, s);
+      Audio.gameOver();
+      g.setTimeout(() => {
+        if (g.destroyed || cur !== g) return;
+        UI.showGameOver(game, s, Storage.getHighscore(game.id), nb);
+      }, 400);
+    };
+
+    setupControls(game, g);
+    g.start();
+  }
+
+  function checkAch(game, score) {
+    const lvl = Storage.getAchievementLevel(game.id);
+    let nl = lvl;
+    game.ach.forEach((t, i) => {
+      const hit = game.inverse ? score <= t : score >= t;
+      if (hit && lvl < i + 1) nl = Math.max(nl, i + 1);
+    });
+    if (nl > lvl) {
+      Storage.setAchievementLevel(game.id, nl);
+      UI.showAchievement(game, nl, game.ach[nl - 1]);
+    }
+  }
+
+  function setupControls(game, g) {
+    const c = document.getElementById('game-controls');
+    c.innerHTML = '';
+    const type = g.getControls();
+    const canvas = document.getElementById('game-canvas');
+
+    if (type === 'dpad' || type === 'dpad-fire' || type === 'dpad-ab') {
+      const dpad = document.createElement('div');
+      dpad.className = 'dpad';
+      dpad.innerHTML = `
+        <button class="dpad-btn dpad-up" data-dir="up">▲</button>
+        <button class="dpad-btn dpad-left" data-dir="left">◀</button>
+        <button class="dpad-btn dpad-right" data-dir="right">▶</button>
+        <button class="dpad-btn dpad-down" data-dir="down">▼</button>
+      `;
+      dpad.querySelectorAll('.dpad-btn').forEach(btn => {
+        const fire = e => {
+          e.preventDefault();
+          if (g.destroyed || cur !== g) return;
+          Audio.tap();
+          g.onInput(btn.dataset.dir, 'press');
+        };
+        btn.addEventListener('touchstart', fire, { passive: false });
+        btn.addEventListener('mousedown', fire);
+      });
+      c.appendChild(dpad);
+
+      if (type === 'dpad-fire') {
+        const fb = document.createElement('button');
+        fb.className = 'action-btn';
+        fb.textContent = '🔥';
+        const fire = e => { e.preventDefault(); if (g.destroyed || cur !== g) return; g.onInput('fire', 'press'); };
+        fb.addEventListener('touchstart', fire, { passive: false });
+        fb.addEventListener('mousedown', fire);
+        c.appendChild(fb);
+      } else if (type === 'dpad-ab') {
+        const a = document.createElement('button');
+        a.className = 'action-btn';
+        a.textContent = '🔄';
+        const fa = e => { e.preventDefault(); if (g.destroyed || cur !== g) return; g.onInput('a', 'press'); };
+        a.addEventListener('touchstart', fa, { passive: false });
+        a.addEventListener('mousedown', fa);
+        c.appendChild(a);
+
+        const b = document.createElement('button');
+        b.className = 'action-btn';
+        b.textContent = '⬇';
+        const fb = e => { e.preventDefault(); if (g.destroyed || cur !== g) return; g.onInput('b', 'press'); };
+        b.addEventListener('touchstart', fb, { passive: false });
+        b.addEventListener('mousedown', fb);
+        c.appendChild(b);
+      }
+    } else if (type === 'tap') {
+      c.innerHTML = '<div class="control-hint">Tap canvas to play</div>';
+    } else if (type === 'drag-h') {
+      c.innerHTML = '<div class="control-hint">Drag horizontally on canvas</div>';
+    } else if (type === 'drag-y') {
+      c.innerHTML = '<div class="control-hint">Drag vertically on canvas</div>';
+    } else if (type === 'drag-free') {
+      c.innerHTML = '<div class="control-hint">Swipe across fruits to slice</div>';
+    } else if (type === 'none') {
+      c.innerHTML = '<div class="control-hint">Tap on the canvas</div>';
+    }
+
+    _canvasCleanups.push(Input.tap(canvas, (nx, ny) => {
+      if (g.destroyed || cur !== g) return;
+      if (g.onTap) g.onTap(nx, ny);
+    }));
+
+    _canvasCleanups.push(Input.drag(canvas, (nx, ny, phase) => {
+      if (g.destroyed || cur !== g) return;
+      if (g.onDrag) g.onDrag(nx, ny, phase);
+    }));
+
+    if (_keyboardCleanup) { _keyboardCleanup(); _keyboardCleanup = null; }
+    _keyboardCleanup = Input.keyboard(a => {
+      if (g.destroyed || cur !== g) return;
+      if (a === 'pause') pause();
+      else if (g.onInput) g.onInput(a, 'press');
+    });
+  }
+
+  function pause() {
+    if (!cur || cur.paused || cur.over || cur.destroyed) return;
+    cur.pause();
+    UI.showPauseMenu();
+  }
+
+  function resume() {
+    if (!cur || cur.destroyed) { UI.closeModal(); return; }
+    UI.closeModal();
+    cur.resume();
+  }
+
+  function restart() {
+    if (!cur) return;
+    const d = def;
+    cleanupAll();
+    cur.stop();
+    cur = null;
+    UI.closeModal();
+    openGame(d);
+  }
+
+  function close() {
+    cleanupAll();
+    if (cur) { cur.stop(); cur = null; }
+    UI.closeModal();
+    def = null;
+    _currentScore = 0;
+    UI.showScreen('menu');
+    UI.renderMenu();
+  }
+
+  // ==== FITUR BARU: Save & Quit ====
+  function saveAndQuit() {
+    const score = _currentScore;
+    const gameDef = def;
+    if (cur && gameDef && score > 0) {
+      const nb = Storage.setHighscore(gameDef.id, score);
+      if (nb) UI.toast(`🏆 New best: ${score}`);
+      else UI.toast(`💾 Saved: ${score}`);
+    }
+    close();
+  }
+
+  function getCurrentScore() { return _currentScore; }
+
+  return {
+    openGame,
+    pauseGame: pause,
+    resumeGame: resume,
+    restartGame: restart,
+    closeGame: close,
+    saveAndQuit,
+    getCurrentScore
+  };
+})();
+/* ============================================================
+   BOOTSTRAP
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+  Storage.init();
+  Audio.setEnabled(Storage.getSetting('sound'));
+  UI.renderMenu();
+
+  document.getElementById('nav-achievements').addEventListener('click', () => {
+    Audio.click();
+    UI.renderAchievements();
+    UI.showScreen('achievements');
+  });
+  document.getElementById('nav-settings').addEventListener('click', () => {
+    Audio.click();
+    document.getElementById('set-sound').checked = Storage.getSetting('sound');
+    document.getElementById('set-vibration').checked = Storage.getSetting('vibration');
+    UI.showScreen('settings');
+  });
+  document.getElementById('nav-about').addEventListener('click', () => {
+    Audio.click();
+    UI.showCredits();
+  });
+
+  document.querySelectorAll('[data-back]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      Audio.click();
+      UI.showScreen('menu');
+      UI.renderMenu();
+    });
+  });
+
+  document.getElementById('game-back').addEventListener('click', () => {
+    Audio.click();
+    Router.closeGame();
+  });
+  document.getElementById('game-pause').addEventListener('click', () => {
+    Audio.click();
+    Router.pauseGame();
+  });
+
+  document.getElementById('set-sound').addEventListener('change', e => {
+    Storage.setSetting('sound', e.target.checked);
+    Audio.setEnabled(e.target.checked);
+    if (e.target.checked) Audio.click();
+  });
+  document.getElementById('set-vibration').addEventListener('change', e => {
+    Storage.setSetting('vibration', e.target.checked);
+    Audio.click();
+  });
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    UI.showModal({
+      title: '⚠️ Reset Data?',
+      body: 'Semua highscore & achievement akan dihapus permanen.',
+      actions: [
+        {
+          label: 'Ya, Reset',
+          onClick: () => {
+            Storage.reset();
+            UI.closeModal();
+            UI.renderMenu();
+            UI.toast('Data direset');
+          }
+        },
+        { label: 'Batal', primary: true, onClick: () => UI.closeModal() }
+      ]
+    });
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) Router.pauseGame();
+  });
+
+  const unlock = () => {
+    Audio.unlock();
+    document.removeEventListener('touchstart', unlock);
+    document.removeEventListener('click', unlock);
+  };
+  document.addEventListener('touchstart', unlock, { once: true });
+  document.addEventListener('click', unlock, { once: true });
+
+  setTimeout(() => {
+    const s = document.getElementById('splash');
+    if (s) { s.classList.add('hide'); setTimeout(() => s.remove(), 500); }
+  }, 800);
+});
+</script>
+</body>
+</html>
